@@ -1,0 +1,235 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* LandAdmin Builder Design System */
+
+@layer base {
+  :root {
+    /* Core brand colors from provided palette */
+    --deep-purple: 237 59% 29%;
+    --light-lavender: 245 23% 92%;
+    --near-black: 0 0% 9%;
+    
+    /* Background & Foreground */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 9%;
+
+    /* Card surfaces */
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 9%;
+
+    /* Popovers */
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 9%;
+
+    /* Primary - Deep Purple */
+    --primary: 237 59% 29%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary - Light Lavender */
+    --secondary: 245 23% 92%;
+    --secondary-foreground: 0 0% 9%;
+
+    /* Muted surfaces */
+    --muted: 245 23% 92%;
+    --muted-foreground: 237 20% 45%;
+
+    /* Accent */
+    --accent: 237 59% 29%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Destructive */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Borders & Inputs */
+    --border: 245 20% 85%;
+    --input: 245 20% 85%;
+    --ring: 237 59% 29%;
+
+    --radius: 0.75rem;
+
+    /* Sidebar */
+    --sidebar-background: 245 23% 92%;
+    --sidebar-foreground: 0 0% 9%;
+    --sidebar-primary: 237 59% 29%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 237 59% 29%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 245 20% 85%;
+    --sidebar-ring: 237 59% 29%;
+
+    /* Custom Design Tokens */
+    --canvas-bg: 245 23% 96%;
+    --widget-bg: 0 0% 100%;
+    --widget-border: 245 20% 88%;
+    --widget-shadow: 237 59% 29%;
+    --drop-zone: 237 59% 85%;
+    
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(237 59% 29%), hsl(237 59% 40%));
+    --gradient-subtle: linear-gradient(180deg, hsl(245 23% 96%), hsl(245 23% 92%));
+    
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(237 59% 29% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(237 59% 29% / 0.1), 0 2px 4px -2px hsl(237 59% 29% / 0.1);
+    --shadow-lg: 0 10px 15px -3px hsl(237 59% 29% / 0.1), 0 4px 6px -4px hsl(237 59% 29% / 0.1);
+    --shadow-xl: 0 20px 25px -5px hsl(237 59% 29% / 0.1), 0 8px 10px -6px hsl(237 59% 29% / 0.1);
+    
+    /* Transitions */
+    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-normal: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-smooth: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .dark {
+    --background: 0 0% 9%;
+    --foreground: 245 23% 92%;
+
+    --card: 0 0% 12%;
+    --card-foreground: 245 23% 92%;
+
+    --popover: 0 0% 12%;
+    --popover-foreground: 245 23% 92%;
+
+    --primary: 237 59% 55%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 15%;
+    --secondary-foreground: 245 23% 92%;
+
+    --muted: 0 0% 15%;
+    --muted-foreground: 245 20% 65%;
+
+    --accent: 237 59% 55%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 237 59% 55%;
+
+    --sidebar-background: 0 0% 9%;
+    --sidebar-foreground: 245 23% 92%;
+    --sidebar-primary: 237 59% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 15%;
+    --sidebar-accent-foreground: 245 23% 92%;
+    --sidebar-border: 0 0% 20%;
+    --sidebar-ring: 237 59% 55%;
+
+    --canvas-bg: 0 0% 6%;
+    --widget-bg: 0 0% 12%;
+    --widget-border: 0 0% 20%;
+    --drop-zone: 237 59% 25%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    font-family: 'Geist', system-ui, sans-serif;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+}
+
+@layer components {
+  .widget-card {
+    @apply bg-widget border border-widget-border rounded-lg p-4 cursor-grab 
+           transition-all duration-200 ease-out hover:shadow-md hover:border-primary/30
+           active:cursor-grabbing active:scale-[0.98];
+  }
+
+  .canvas-drop-zone {
+    @apply min-h-[200px] border-2 border-dashed border-border rounded-lg 
+           transition-all duration-200;
+  }
+
+  .canvas-drop-zone.drag-over {
+    @apply border-primary bg-drop-zone/20;
+  }
+
+  .element-container {
+    @apply bg-widget border border-widget-border rounded-lg p-4 
+           transition-all duration-200 hover:shadow-md;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  
+  .element-container[draggable="true"] {
+    cursor: move;
+  }
+  
+  .element-container[draggable="true"]:active {
+    cursor: grabbing;
+  }
+
+  .sidebar-widget {
+    @apply flex items-center gap-3 p-3 bg-widget rounded-lg border border-widget-border
+           cursor-grab transition-all duration-200 hover:border-primary/50 hover:shadow-sm
+           active:cursor-grabbing active:scale-[0.98];
+  }
+}
+
+@layer utilities {
+  .shadow-widget {
+    box-shadow: var(--shadow-md);
+  }
+
+  .shadow-widget-hover {
+    box-shadow: var(--shadow-lg);
+  }
+
+  .gradient-primary {
+    background: var(--gradient-primary);
+  }
+
+  .gradient-subtle {
+    background: var(--gradient-subtle);
+  }
+
+  .transition-fast {
+    transition: all var(--transition-fast);
+  }
+
+  .transition-normal {
+    transition: all var(--transition-normal);
+  }
+
+  .transition-smooth {
+    transition: all var(--transition-smooth);
+  }
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  input, textarea {
+    border: none !important;
+    border-bottom: 1px dotted hsl(var(--foreground)) !important;
+    background: transparent !important;
+  }
+
+  .element-container {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
