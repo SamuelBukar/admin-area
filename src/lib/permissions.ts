@@ -2,7 +2,7 @@ import type { UserRole, Permission } from '@/types/auth';
 
 export const getDefaultPermissionsForRole = (role: UserRole): Permission => {
   const basePermissions: Permission = {
-    pages: { create: false, edit: false, delete: false, publish: false },
+    pages: { view: false, create: false, edit: false, delete: false, publish: false },
     users: { create: false, edit: false, delete: false },
     templates: { create: false, edit: false, delete: false },
     settings: { view: false, edit: false },
@@ -16,7 +16,7 @@ export const getDefaultPermissionsForRole = (role: UserRole): Permission => {
     case 'admin':
       // Admin gets full access to everything
       return {
-        pages: { create: true, edit: true, delete: true, publish: true },
+        pages: { view: true, create: true, edit: true, delete: true, publish: true },
         users: { create: true, edit: true, delete: true },
         templates: { create: true, edit: true, delete: true },
         settings: { view: true, edit: true },

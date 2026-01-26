@@ -99,6 +99,44 @@ export const useCreatePage = () => {
   });
 };
 
+export const useSaveTemplate = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ elements, userId }: { elements: FormElement[]; userId?: string }) => 
+      pagesApi.saveTemplate(elements, userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.pages.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.stats });
+    },
+    onError: (error) => {
+      console.error('Save template error:', error);
+    },
+  });
+};
+
+export const useLinkTemplates = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ templateIds, pageData }: { templateIds: string[]; pageData: { title: string; slug: string; description?: string; status?: 'published' | 'draft' } }) =>
+      pagesApi.linkTemplates(templateIds, pageData),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.pages.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.stats });
+      if (data.status === 'published') {
+        toast.success('Templates linked and page published successfully');
+      } else {
+        toast.success('Templates linked and page created successfully');
+      }
+    },
+    onError: (error) => {
+      toast.error('Failed to link templates');
+      console.error('Link templates error:', error);
+    },
+  });
+};
+
 export const useDeletePage = () => {
   const queryClient = useQueryClient();
 

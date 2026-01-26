@@ -4,6 +4,7 @@ import { getWidgetConfig } from '@/config/widgets';
 import { WidgetSidebar } from './WidgetSidebar';
 import { BuilderCanvas } from './BuilderCanvas';
 import { BuilderHeader } from './BuilderHeader';
+import { useSaveTemplate } from '@/hooks/useQueries';
 import { toast } from 'sonner';
 
 interface FormBuilderProps {
@@ -14,7 +15,7 @@ interface FormBuilderProps {
 export const FormBuilder = ({ pageId, initialElements }: FormBuilderProps) => {
   const [elements, setElements] = useState<FormElement[]>(initialElements || []);
   const [isDragOver, setIsDragOver] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const saveTemplate = useSaveTemplate();
 
   useEffect(() => {
     if (initialElements) {
@@ -290,27 +291,36 @@ export const FormBuilder = ({ pageId, initialElements }: FormBuilderProps) => {
     toast.success(`${config.label} added to ${targetName}`);
   }, []);
 
-  // Save draft (simulated - would connect to Firebase)
-  const handleSave = useCallback(async () => {
-    setIsSaving(true);
-    try {
-      // Simulate save delay
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      
-      // Store in localStorage for demo purposes
-      const draftData = {
-        elements,
-        lastModified: new Date().toISOString(),
-      };
-      localStorage.setItem('landadmin-draft', JSON.stringify(draftData));
-      
-      toast.success('Draft saved successfully');
-    } catch (error) {
-      toast.error('Failed to save draft');
-    } finally {
-      setIsSaving(false);
+  // Save draft - auto-saves as template to Pages
+  const handleSave = useCallback(() => {
+    if (elements.length === 0) {
+      toast.error('Please add at least one element to save a template');
+      return;
     }
-  }, [elements]);
+    
+    // Get current user ID
+    const savedUser = localStorage.getItem('landadmin-user');
+    const userId = savedUser ? JSON.parse(savedUser).id : undefined;
+    
+    // Save template using mutation hook (which will invalidate queries)
+    saveTemplate.mutate(
+      { elements, userId },
+      {
+        onSuccess: () => {
+          // Also store in localStorage for draft recovery
+          const draftData = {
+            elements,
+            lastModified: new Date().toISOString(),
+          };
+          localStorage.setItem('landadmin-draft', JSON.stringify(draftData));
+          toast.success('Template saved! You can now use it in Create Forms.');
+        },
+        onError: () => {
+          toast.error('Failed to save template');
+        },
+      }
+    );
+  }, [elements, saveTemplate]);
 
   // Print / Export PDF
   const handlePrint = useCallback(() => {
@@ -334,7 +344,7 @@ export const FormBuilder = ({ pageId, initialElements }: FormBuilderProps) => {
         onSave={handleSave}
         onPrint={handlePrint}
         onClear={handleClear}
-        isSaving={isSaving}
+        isSaving={saveTemplate.isPending}
       />
 
       <div className="flex flex-col md:flex-row flex-1 overflow-hidden">

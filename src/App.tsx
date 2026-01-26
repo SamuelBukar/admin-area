@@ -19,6 +19,7 @@ const Builder = lazy(() => import("./pages/Builder"));
 const Preview = lazy(() => import("./pages/Preview"));
 const PageView = lazy(() => import("./pages/PageView"));
 const Pages = lazy(() => import("./pages/Pages"));
+const CreateForm = lazy(() => import("./pages/CreateForm"));
 const Payments = lazy(() => import("./pages/Payments"));
 const PaymentView = lazy(() => import("./pages/PaymentView"));
 const Allocations = lazy(() => import("./pages/Allocations"));
@@ -101,6 +102,18 @@ const App = () => (
                   <RoleProtectedRoute allowedRoles={['admin']}>
                     <DashboardLayout>
                       <Pages />
+                    </DashboardLayout>
+                  </RoleProtectedRoute>
+                }
+              />
+
+              {/* Create Form Route */}
+              <Route
+                path="/dashboard/create-form"
+                element={
+                  <RoleProtectedRoute allowedRoles={['admin']}>
+                    <DashboardLayout>
+                      <CreateForm />
                     </DashboardLayout>
                   </RoleProtectedRoute>
                 }

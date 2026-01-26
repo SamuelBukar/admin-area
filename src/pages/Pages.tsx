@@ -19,22 +19,28 @@ import {
   MdFilterList,
   MdSort,
   MdContentCopy,
-  MdOpenInNew
+  MdOpenInNew,
+  MdLink,
+  MdDescription
 } from 'react-icons/md';
 import { usePages, useDeletePage } from '@/hooks/useQueries';
 import { useAuth } from '@/contexts/AuthContext';
 import { CreatePageModal } from '@/components/modals/CreatePageModal';
 import { DeleteConfirmModal } from '@/components/modals/DeleteConfirmModal';
+import { LinkTemplatesModal } from '@/components/modals/LinkTemplatesModal';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
+import type { Page } from '@/lib/api';
 
 type StatusFilter = 'all' | 'published' | 'draft';
 type SortOption = 'updated' | 'views' | 'title';
+type TypeFilter = 'all' | 'templates' | 'pages';
 
 const Pages = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
   const [sortBy, setSortBy] = useState<SortOption>('updated');
   const [selectedPages, setSelectedPages] = useState<Set<string>>(new Set());
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -44,6 +50,9 @@ const Pages = () => {
   const { data: pages, isLoading } = usePages();
   const deletePage = useDeletePage();
   const { hasPermission } = useAuth();
+
+  // Get templates count for button state
+  const templates = pages?.filter(p => p.isTemplate && !p.isNamed) || [];
 
   const canCreate = hasPermission('pages', 'create');
   const canEdit = hasPermission('pages', 'edit');
@@ -63,7 +72,12 @@ const Pages = () => {
         (statusFilter === 'published' && page.status === 'published') ||
         (statusFilter === 'draft' && page.status === 'draft');
       
-      return matchesSearch && matchesStatus;
+      const matchesType = 
+        typeFilter === 'all' ||
+        (typeFilter === 'templates' && page.isTemplate && !page.isNamed) ||
+        (typeFilter === 'pages' && (!page.isTemplate || page.isNamed));
+      
+      return matchesSearch && matchesStatus && matchesType;
     });
 
     // Sort
@@ -136,32 +150,66 @@ const Pages = () => {
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 animate-fade-in">
           <div>
-            <h1 className="text-3xl font-bold text-foreground mb-2">Pages</h1>
+            <h1 className="text-3xl font-bold text-foreground mb-2">Pages & Templates</h1>
             <p className="text-muted-foreground">
-              Manage all your published pages and forms
+              Build templates in the Builder, then link them together to create and publish pages.
             </p>
           </div>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span>
-                  <Button 
-                    className="shadow-sm" 
-                    onClick={() => setCreateModalOpen(true)}
-                    disabled={!canCreate}
-                  >
-                    <MdAdd className="w-5 h-5 mr-2" />
-                    Create New Page
-                  </Button>
-                </span>
-              </TooltipTrigger>
-              {!canCreate && (
-                <TooltipContent>
-                  <p>You don't have permission to create pages</p>
-                </TooltipContent>
-              )}
-            </Tooltip>
-          </TooltipProvider>
+          <div className="flex items-center gap-2">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
+                    <Button 
+                      className="shadow-sm" 
+                      onClick={() => navigate('/dashboard/create-form')}
+                      disabled={!canCreate || templates.length === 0}
+                    >
+                      <MdLink className="w-5 h-5 mr-2" />
+                      Create Forms
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                {!canCreate && (
+                  <TooltipContent>
+                    <p>You don't have permission to create pages</p>
+                  </TooltipContent>
+                )}
+                {canCreate && templates.length === 0 && (
+                  <TooltipContent>
+                    <p>No templates available. Build templates in the Builder first, then create forms from them.</p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
+                    <Button 
+                      variant="outline"
+                      className="shadow-sm" 
+                      onClick={() => setCreateModalOpen(true)}
+                      disabled={!canCreate}
+                    >
+                      <MdAdd className="w-5 h-5 mr-2" />
+                      Create Page
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                {!canCreate && (
+                  <TooltipContent>
+                    <p>You don't have permission to create pages</p>
+                  </TooltipContent>
+                )}
+                {canCreate && (
+                  <TooltipContent>
+                    <p>Create a new empty page</p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </div>
 
         {/* Filters and Search */}
@@ -178,6 +226,18 @@ const Pages = () => {
             </div>
             
             <div className="flex flex-wrap items-center gap-4">
+              {/* Type Filter */}
+              <div className="flex items-center gap-2">
+                <MdDescription className="w-4 h-4 text-muted-foreground" />
+                <Tabs value={typeFilter} onValueChange={(v) => setTypeFilter(v as TypeFilter)}>
+                  <TabsList>
+                    <TabsTrigger value="all">All</TabsTrigger>
+                    <TabsTrigger value="templates">Templates</TabsTrigger>
+                    <TabsTrigger value="pages">Pages</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
+
               {/* Status Filter */}
               <div className="flex items-center gap-2">
                 <MdFilterList className="w-4 h-4 text-muted-foreground" />
@@ -279,18 +339,28 @@ const Pages = () => {
                         />
                       )}
                       <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
+                        <div className="flex items-center gap-3 mb-2 flex-wrap">
                           <CardTitle className="text-xl">{page.title}</CardTitle>
-                          <Badge variant={page.status === 'published' ? 'default' : 'secondary'}>
-                            {page.status === 'published' ? (
-                              <><MdVisibility className="w-3 h-3 mr-1" /> Published</>
-                            ) : (
-                              <><MdVisibilityOff className="w-3 h-3 mr-1" /> Draft</>
-                            )}
-                          </Badge>
+                          {page.isTemplate && !page.isNamed && (
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 border-blue-200 dark:border-blue-800">
+                              <MdDescription className="w-3 h-3 mr-1" /> Template
+                            </Badge>
+                          )}
+                          {(!page.isTemplate || page.isNamed) && (
+                            <Badge variant={page.status === 'published' ? 'default' : 'secondary'}>
+                              {page.status === 'published' ? (
+                                <><MdVisibility className="w-3 h-3 mr-1" /> Published</>
+                              ) : (
+                                <><MdVisibilityOff className="w-3 h-3 mr-1" /> Draft</>
+                              )}
+                            </Badge>
+                          )}
                         </div>
                         <CardDescription>
                           <span className="font-mono text-xs">{page.slug}</span>
+                          {page.description && (
+                            <span className="ml-2 text-xs">• {page.description}</span>
+                          )}
                         </CardDescription>
                       </div>
                     </div>
@@ -350,6 +420,26 @@ const Pages = () => {
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
+
+                      {/* Link Templates button for templates */}
+                      {page.isTemplate && !page.isNamed && canCreate && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => {
+                                  navigate(`/dashboard/create-form?template=${page.id}`);
+                                }}
+                              >
+                                <MdLink className="w-4 h-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Create Form from Templates</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
 
                       {canCreate && (
                         <TooltipProvider>

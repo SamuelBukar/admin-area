@@ -1,6 +1,6 @@
 import { FormElement, InputContent, SelectContent, RadioContent, CheckboxContent, GridContent, ContainerContent, SpaceContent, ImageContent, ButtonContent } from '@/types/builder';
 import { MdClose, MdDragIndicator, MdEdit, MdAdd } from 'react-icons/md';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -24,6 +24,8 @@ interface ElementRendererProps {
 
 export const ElementRenderer = ({ element, onDelete, onUpdate, onDropInContainer, onMoveElement, parentId }: ElementRendererProps) => {
   const [isEditing, setIsEditing] = useState(false);
+  const [isEditingLabel, setIsEditingLabel] = useState(false);
+  const [labelValue, setLabelValue] = useState('');
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [dragOverColumn, setDragOverColumn] = useState<number | null>(null);
   const [isDragOverContainer, setIsDragOverContainer] = useState(false);
@@ -103,6 +105,12 @@ export const ElementRenderer = ({ element, onDelete, onUpdate, onDropInContainer
     setDragOverColumn(null);
     setIsDragOverContainer(false);
   };
+
+  // Reset label editing state when element changes
+  useEffect(() => {
+    setIsEditingLabel(false);
+    setLabelValue('');
+  }, [element.id]);
 
   const getElementStyle = () => {
     if (!element.styles) return {};
@@ -252,12 +260,48 @@ export const ElementRenderer = ({ element, onDelete, onUpdate, onDropInContainer
 
       case 'INPUT': {
         const inputContent = element.content as InputContent;
+        const handleLabelClick = () => {
+          setIsEditingLabel(true);
+          setLabelValue(inputContent.label);
+        };
+        const handleLabelBlur = () => {
+          setIsEditingLabel(false);
+          if (labelValue !== inputContent.label) {
+            onUpdate(element.id, { ...inputContent, label: labelValue }, element.styles);
+          }
+        };
+        const handleLabelKeyDown = (e: React.KeyboardEvent) => {
+          if (e.key === 'Enter') {
+            handleLabelBlur();
+          } else if (e.key === 'Escape') {
+            setLabelValue(inputContent.label);
+            setIsEditingLabel(false);
+          }
+        };
         return (
           <div className="space-y-2" style={elementStyle}>
-            <Label className="text-sm font-medium text-foreground">
-              {inputContent.label}
-              {inputContent.required && <span className="text-destructive ml-1">*</span>}
-            </Label>
+            {isEditingLabel ? (
+              <Input
+                value={labelValue}
+                onChange={(e) => setLabelValue(e.target.value)}
+                onBlur={handleLabelBlur}
+                onKeyDown={handleLabelKeyDown}
+                autoFocus
+                className="text-sm font-medium border-primary h-7"
+                onClick={(e) => e.stopPropagation()}
+              />
+            ) : (
+              <Label 
+                className="text-sm font-medium text-foreground cursor-text hover:bg-accent/50 px-1 py-0.5 rounded"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleLabelClick();
+                }}
+              >
+                {inputContent.label}
+                {inputContent.required && <span className="text-destructive ml-1">*</span>}
+              </Label>
+            )}
             <Input 
               placeholder={inputContent.placeholder}
               className="print:border-0 print:border-b print:border-dotted print:rounded-none"
@@ -268,12 +312,48 @@ export const ElementRenderer = ({ element, onDelete, onUpdate, onDropInContainer
 
       case 'TEXTAREA': {
         const textareaContent = element.content as InputContent;
+        const handleLabelClick = () => {
+          setIsEditingLabel(true);
+          setLabelValue(textareaContent.label);
+        };
+        const handleLabelBlur = () => {
+          setIsEditingLabel(false);
+          if (labelValue !== textareaContent.label) {
+            onUpdate(element.id, { ...textareaContent, label: labelValue }, element.styles);
+          }
+        };
+        const handleLabelKeyDown = (e: React.KeyboardEvent) => {
+          if (e.key === 'Enter') {
+            handleLabelBlur();
+          } else if (e.key === 'Escape') {
+            setLabelValue(textareaContent.label);
+            setIsEditingLabel(false);
+          }
+        };
         return (
           <div className="space-y-2" style={elementStyle}>
-            <Label className="text-sm font-medium text-foreground">
-              {textareaContent.label}
-              {textareaContent.required && <span className="text-destructive ml-1">*</span>}
-            </Label>
+            {isEditingLabel ? (
+              <Input
+                value={labelValue}
+                onChange={(e) => setLabelValue(e.target.value)}
+                onBlur={handleLabelBlur}
+                onKeyDown={handleLabelKeyDown}
+                autoFocus
+                className="text-sm font-medium border-primary h-7"
+                onClick={(e) => e.stopPropagation()}
+              />
+            ) : (
+              <Label 
+                className="text-sm font-medium text-foreground cursor-text hover:bg-accent/50 px-1 py-0.5 rounded"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleLabelClick();
+                }}
+              >
+                {textareaContent.label}
+                {textareaContent.required && <span className="text-destructive ml-1">*</span>}
+              </Label>
+            )}
             <Textarea 
               placeholder={textareaContent.placeholder}
               className="resize-none print:border-0 print:border-b print:border-dotted print:rounded-none"
@@ -285,24 +365,97 @@ export const ElementRenderer = ({ element, onDelete, onUpdate, onDropInContainer
 
       case 'CHECKBOX': {
         const checkboxContent = element.content as CheckboxContent;
+        const handleLabelClick = () => {
+          setIsEditingLabel(true);
+          setLabelValue(checkboxContent.label);
+        };
+        const handleLabelBlur = () => {
+          setIsEditingLabel(false);
+          if (labelValue !== checkboxContent.label) {
+            onUpdate(element.id, { ...checkboxContent, label: labelValue }, element.styles);
+          }
+        };
+        const handleLabelKeyDown = (e: React.KeyboardEvent) => {
+          if (e.key === 'Enter') {
+            handleLabelBlur();
+          } else if (e.key === 'Escape') {
+            setLabelValue(checkboxContent.label);
+            setIsEditingLabel(false);
+          }
+        };
         return (
           <div className="flex items-center space-x-3" style={elementStyle}>
             <Checkbox id={element.id} />
-            <Label htmlFor={element.id} className="text-sm text-foreground cursor-pointer">
-              {checkboxContent.label}
-            </Label>
+            {isEditingLabel ? (
+              <Input
+                value={labelValue}
+                onChange={(e) => setLabelValue(e.target.value)}
+                onBlur={handleLabelBlur}
+                onKeyDown={handleLabelKeyDown}
+                autoFocus
+                className="text-sm border-primary h-7 flex-1"
+                onClick={(e) => e.stopPropagation()}
+              />
+            ) : (
+              <Label 
+                htmlFor={element.id} 
+                className="text-sm text-foreground cursor-text hover:bg-accent/50 px-1 py-0.5 rounded flex-1"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleLabelClick();
+                }}
+              >
+                {checkboxContent.label}
+              </Label>
+            )}
           </div>
         );
       }
 
       case 'RADIO': {
         const radioContent = element.content as RadioContent;
+        const handleLabelClick = () => {
+          setIsEditingLabel(true);
+          setLabelValue(radioContent.label);
+        };
+        const handleLabelBlur = () => {
+          setIsEditingLabel(false);
+          if (labelValue !== radioContent.label) {
+            onUpdate(element.id, { ...radioContent, label: labelValue }, element.styles);
+          }
+        };
+        const handleLabelKeyDown = (e: React.KeyboardEvent) => {
+          if (e.key === 'Enter') {
+            handleLabelBlur();
+          } else if (e.key === 'Escape') {
+            setLabelValue(radioContent.label);
+            setIsEditingLabel(false);
+          }
+        };
         return (
           <div className="space-y-3" style={elementStyle}>
-            <Label className="text-sm font-medium text-foreground">
-              {radioContent.label}
-              {radioContent.required && <span className="text-destructive ml-1">*</span>}
-            </Label>
+            {isEditingLabel ? (
+              <Input
+                value={labelValue}
+                onChange={(e) => setLabelValue(e.target.value)}
+                onBlur={handleLabelBlur}
+                onKeyDown={handleLabelKeyDown}
+                autoFocus
+                className="text-sm font-medium border-primary h-7"
+                onClick={(e) => e.stopPropagation()}
+              />
+            ) : (
+              <Label 
+                className="text-sm font-medium text-foreground cursor-text hover:bg-accent/50 px-1 py-0.5 rounded"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleLabelClick();
+                }}
+              >
+                {radioContent.label}
+                {radioContent.required && <span className="text-destructive ml-1">*</span>}
+              </Label>
+            )}
             <RadioGroup>
               {radioContent.options.map((option, idx) => (
                 <div key={idx} className="flex items-center space-x-3">
@@ -319,12 +472,48 @@ export const ElementRenderer = ({ element, onDelete, onUpdate, onDropInContainer
 
       case 'SELECT': {
         const selectContent = element.content as SelectContent;
+        const handleLabelClick = () => {
+          setIsEditingLabel(true);
+          setLabelValue(selectContent.label);
+        };
+        const handleLabelBlur = () => {
+          setIsEditingLabel(false);
+          if (labelValue !== selectContent.label) {
+            onUpdate(element.id, { ...selectContent, label: labelValue }, element.styles);
+          }
+        };
+        const handleLabelKeyDown = (e: React.KeyboardEvent) => {
+          if (e.key === 'Enter') {
+            handleLabelBlur();
+          } else if (e.key === 'Escape') {
+            setLabelValue(selectContent.label);
+            setIsEditingLabel(false);
+          }
+        };
         return (
           <div className="space-y-2" style={elementStyle}>
-            <Label className="text-sm font-medium text-foreground">
-              {selectContent.label}
-              {selectContent.required && <span className="text-destructive ml-1">*</span>}
-            </Label>
+            {isEditingLabel ? (
+              <Input
+                value={labelValue}
+                onChange={(e) => setLabelValue(e.target.value)}
+                onBlur={handleLabelBlur}
+                onKeyDown={handleLabelKeyDown}
+                autoFocus
+                className="text-sm font-medium border-primary h-7"
+                onClick={(e) => e.stopPropagation()}
+              />
+            ) : (
+              <Label 
+                className="text-sm font-medium text-foreground cursor-text hover:bg-accent/50 px-1 py-0.5 rounded"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleLabelClick();
+                }}
+              >
+                {selectContent.label}
+                {selectContent.required && <span className="text-destructive ml-1">*</span>}
+              </Label>
+            )}
             <Select>
               <SelectTrigger>
                 <SelectValue placeholder="Select an option" />
@@ -343,12 +532,48 @@ export const ElementRenderer = ({ element, onDelete, onUpdate, onDropInContainer
 
       case 'DATE': {
         const dateContent = element.content as InputContent;
+        const handleLabelClick = () => {
+          setIsEditingLabel(true);
+          setLabelValue(dateContent.label);
+        };
+        const handleLabelBlur = () => {
+          setIsEditingLabel(false);
+          if (labelValue !== dateContent.label) {
+            onUpdate(element.id, { ...dateContent, label: labelValue }, element.styles);
+          }
+        };
+        const handleLabelKeyDown = (e: React.KeyboardEvent) => {
+          if (e.key === 'Enter') {
+            handleLabelBlur();
+          } else if (e.key === 'Escape') {
+            setLabelValue(dateContent.label);
+            setIsEditingLabel(false);
+          }
+        };
         return (
           <div className="space-y-2" style={elementStyle}>
-            <Label className="text-sm font-medium text-foreground">
-              {dateContent.label}
-              {dateContent.required && <span className="text-destructive ml-1">*</span>}
-            </Label>
+            {isEditingLabel ? (
+              <Input
+                value={labelValue}
+                onChange={(e) => setLabelValue(e.target.value)}
+                onBlur={handleLabelBlur}
+                onKeyDown={handleLabelKeyDown}
+                autoFocus
+                className="text-sm font-medium border-primary h-7"
+                onClick={(e) => e.stopPropagation()}
+              />
+            ) : (
+              <Label 
+                className="text-sm font-medium text-foreground cursor-text hover:bg-accent/50 px-1 py-0.5 rounded"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleLabelClick();
+                }}
+              >
+                {dateContent.label}
+                {dateContent.required && <span className="text-destructive ml-1">*</span>}
+              </Label>
+            )}
             <Input 
               type="date"
               className="print:border-0 print:border-b print:border-dotted print:rounded-none"
@@ -359,6 +584,24 @@ export const ElementRenderer = ({ element, onDelete, onUpdate, onDropInContainer
 
       case 'BUTTON': {
         const buttonContent = element.content as ButtonContent;
+        const handleLabelClick = () => {
+          setIsEditingLabel(true);
+          setLabelValue(buttonContent.label);
+        };
+        const handleLabelBlur = () => {
+          setIsEditingLabel(false);
+          if (labelValue !== buttonContent.label) {
+            onUpdate(element.id, { ...buttonContent, label: labelValue }, element.styles);
+          }
+        };
+        const handleLabelKeyDown = (e: React.KeyboardEvent) => {
+          if (e.key === 'Enter') {
+            handleLabelBlur();
+          } else if (e.key === 'Escape') {
+            setLabelValue(buttonContent.label);
+            setIsEditingLabel(false);
+          }
+        };
         const handleButtonClick = async () => {
           if (buttonContent.actionType === 'link') {
             if (buttonContent.link) {
@@ -423,12 +666,33 @@ export const ElementRenderer = ({ element, onDelete, onUpdate, onDropInContainer
 
         return (
           <div className="space-y-2" style={elementStyle}>
-            <Button
-              onClick={handleButtonClick}
-              className="print:border print:border-gray-400 print:bg-transparent print:text-black"
-            >
-              {buttonContent.label}
-            </Button>
+            {isEditingLabel ? (
+              <Input
+                value={labelValue}
+                onChange={(e) => setLabelValue(e.target.value)}
+                onBlur={handleLabelBlur}
+                onKeyDown={handleLabelKeyDown}
+                autoFocus
+                className="text-sm border-primary h-9"
+                onClick={(e) => e.stopPropagation()}
+              />
+            ) : (
+              <Button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!isEditingLabel) {
+                    handleButtonClick();
+                  }
+                }}
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  handleLabelClick();
+                }}
+                className="print:border print:border-gray-400 print:bg-transparent print:text-black cursor-pointer"
+              >
+                {buttonContent.label}
+              </Button>
+            )}
           </div>
         );
       }

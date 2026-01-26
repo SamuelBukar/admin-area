@@ -138,7 +138,7 @@ export const PaymentTracking = ({ payments, isLoading }: PaymentTrackingProps) =
                 {filteredPayments.map((payment) => (
                   <TableRow key={payment.id}>
                     <TableCell className="font-medium">{payment.description}</TableCell>
-                    <TableCell>${payment.amount.toLocaleString()}</TableCell>
+                    <TableCell>₦{payment.amount.toLocaleString()}</TableCell>
                     <TableCell>{getStatusBadge(payment.status)}</TableCell>
                     <TableCell>
                       <span className="text-sm text-muted-foreground">

@@ -72,7 +72,7 @@ export const EditPaymentStatusModal = ({
             <Label>Payment Details</Label>
             <div className="p-3 rounded-lg border border-border bg-muted/50">
               <p className="text-sm font-medium">{payment.description}</p>
-              <p className="text-sm text-muted-foreground">Amount: ${payment.amount.toLocaleString()}</p>
+              <p className="text-sm text-muted-foreground">Amount: ₦{payment.amount.toLocaleString()}</p>
               <p className="text-sm text-muted-foreground">Current Status: {getStatusBadge(payment.status)}</p>
             </div>
           </div>

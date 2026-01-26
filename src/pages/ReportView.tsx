@@ -184,7 +184,7 @@ export default function ReportView() {
                         <option value="">None</option>
                         {relatedPayments.map((payment) => (
                           <option key={payment.id} value={payment.id}>
-                            {payment.description} - ${payment.amount}
+                            {payment.description} - ₦{payment.amount}
                           </option>
                         ))}
                       </select>

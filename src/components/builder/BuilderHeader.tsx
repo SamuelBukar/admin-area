@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MdPrint, MdSave, MdDeleteSweep, MdArrowBack, MdSettings, MdLogout, MdPreview, MdPublish } from 'react-icons/md';
+import { MdPrint, MdSave, MdDeleteSweep, MdArrowBack, MdSettings, MdLogout, MdPreview } from 'react-icons/md';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,8 +23,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { PublishModal } from '@/components/modals/PublishModal';
-import { usePublishPage } from '@/hooks/useQueries';
 
 interface BuilderHeaderProps {
   elementCount: number;
@@ -48,8 +46,6 @@ export const BuilderHeader = ({
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
-  const [publishModalOpen, setPublishModalOpen] = useState(false);
-  const publishPage = usePublishPage();
 
   const handleClearConfirm = () => {
     onClear();
@@ -75,18 +71,6 @@ export const BuilderHeader = ({
     window.open(previewUrl, '_blank');
   };
 
-  const handlePublish = (targetPageId: string | null, pageData: { title: string; slug: string; status: 'published' | 'draft' }) => {
-    // If editing existing page, use that pageId, otherwise use targetPageId
-    const finalPageId = pageId || targetPageId;
-    publishPage.mutate(
-      { pageId: finalPageId, elements, pageData },
-      {
-        onSuccess: () => {
-          setPublishModalOpen(false);
-        },
-      }
-    );
-  };
 
   return (
     <>
@@ -111,7 +95,7 @@ export const BuilderHeader = ({
                 {pageId ? 'Edit Template' : 'Template Builder'}
               </h1>
               <p className="text-sm text-muted-foreground">
-                {elementCount} element{elementCount !== 1 ? 's' : ''} in template
+                {elementCount} element{elementCount !== 1 ? 's' : ''} • Save to create template
               </p>
             </div>
           </div>
@@ -147,16 +131,6 @@ export const BuilderHeader = ({
             >
               <MdSave className="w-4 h-4 sm:mr-2" />
               <span className="hidden sm:inline">{isSaving ? 'Saving...' : 'Save Draft'}</span>
-            </Button>
-            <Button
-              variant="default"
-              size="sm"
-              onClick={() => setPublishModalOpen(true)}
-              disabled={elementCount === 0}
-              className="flex-1 sm:flex-initial"
-            >
-              <MdPublish className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline">Publish</span>
             </Button>
             <Button
               variant="outline"
@@ -231,14 +205,6 @@ export const BuilderHeader = ({
       </AlertDialogContent>
     </AlertDialog>
 
-    {/* Publish Modal */}
-    <PublishModal
-      open={publishModalOpen}
-      onOpenChange={setPublishModalOpen}
-      elements={elements}
-      onPublish={handlePublish}
-      isPublishing={publishPage.isPending}
-    />
     </>
   );
 };

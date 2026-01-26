@@ -15,7 +15,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MdSearch, MdVisibility, MdDescription, MdDownload } from 'react-icons/md';
+import { MdSearch, MdVisibility, MdDescription, MdDownload, MdAdd } from 'react-icons/md';
 import { useUserApplications } from '@/hooks/useQueries';
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
@@ -77,11 +77,17 @@ export default function MyApplications() {
 
       <div className="p-6 lg:p-8 space-y-6">
         {/* Header */}
-        <div className="animate-fade-in">
-          <h1 className="text-3xl font-bold text-foreground mb-2">My Applications</h1>
-          <p className="text-muted-foreground">
-            View and manage your submitted applications
-          </p>
+        <div className="animate-fade-in flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground mb-2">My Applications</h1>
+            <p className="text-muted-foreground">
+              View and manage your submitted applications. You can submit multiple applications for the same form.
+            </p>
+          </div>
+          <Button onClick={() => navigate('/dashboard/applications')}>
+            <MdAdd className="w-4 h-4 mr-2" />
+            New Application
+          </Button>
         </div>
 
         {/* Filters */}
@@ -156,6 +162,7 @@ export default function MyApplications() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Title</TableHead>
+                    <TableHead>Form</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Submitted</TableHead>
                     <TableHead>Last Updated</TableHead>
@@ -167,7 +174,28 @@ export default function MyApplications() {
                     const statusBadge = getStatusBadge(application.status);
                     return (
                       <TableRow key={application.id}>
-                        <TableCell className="font-medium">{application.title}</TableCell>
+                        <TableCell className="font-medium">
+                          {application.title}
+                          {application.pageId && (
+                            <span className="text-xs text-muted-foreground ml-2">
+                              (Application #{filteredApplications.filter(a => a.pageId === application.pageId && new Date(a.createdAt) <= new Date(application.createdAt)).length})
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {application.pageId ? (
+                            <Button
+                              variant="link"
+                              size="sm"
+                              className="h-auto p-0 text-xs"
+                              onClick={() => navigate(`/dashboard/applications/${application.pageId}`)}
+                            >
+                              Apply Again
+                            </Button>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
                         <TableCell>
                           <Badge variant={statusBadge.variant}>
                             {statusBadge.label}

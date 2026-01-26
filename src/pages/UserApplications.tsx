@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { MdSearch, MdDescription, MdVisibility, MdAdd } from 'react-icons/md';
 import { usePublishedPages, useUserApplications } from '@/hooks/useQueries';
 import { useAuth } from '@/contexts/AuthContext';
+import type { Application } from '@/types/application';
 
 export default function UserApplications() {
   const navigate = useNavigate();
@@ -25,11 +26,21 @@ export default function UserApplications() {
     );
   }, [publishedPages, searchQuery]);
 
-  // Get application status for each page
-  const getPageApplicationStatus = (pageId: string): string | null => {
-    if (!userApplications) return null;
-    const application = userApplications.find(app => app.pageId === pageId);
-    return application?.status || null;
+  // Get all applications for a page (users can apply multiple times)
+  const getPageApplications = (pageId: string): Application[] => {
+    if (!userApplications) return [];
+    return userApplications.filter(app => app.pageId === pageId);
+  };
+
+  // Get the latest application status for display
+  const getLatestApplicationStatus = (pageId: string): string | null => {
+    const applications = getPageApplications(pageId);
+    if (applications.length === 0) return null;
+    // Sort by createdAt descending and get the latest
+    const sorted = [...applications].sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+    return sorted[0]?.status || null;
   };
 
   const handleStartApplication = (pageId: string) => {
@@ -107,7 +118,9 @@ export default function UserApplications() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredPages.map((page, index) => {
-              const status = getPageApplicationStatus(page.id);
+              const applications = getPageApplications(page.id);
+              const latestStatus = getLatestApplicationStatus(page.id);
+              const applicationCount = applications.length;
               return (
                 <Card
                   key={page.id}
@@ -131,25 +144,37 @@ export default function UserApplications() {
                     <div className="space-y-4">
                       <div className="text-sm text-muted-foreground">
                         {page.views} views
+                        {applicationCount > 0 && (
+                          <span className="ml-2">
+                            • {applicationCount} application{applicationCount !== 1 ? 's' : ''}
+                          </span>
+                        )}
                       </div>
+                      {latestStatus && (
+                        <div className="text-sm">
+                          <Badge variant={getStatusBadge(latestStatus)}>
+                            Latest: {latestStatus === 'draft' ? 'Draft' : latestStatus === 'submitted' ? 'Submitted' : latestStatus === 'under_review' ? 'Under Review' : latestStatus === 'approved' ? 'Approved' : 'Rejected'}
+                          </Badge>
+                        </div>
+                      )}
                       <div className="flex gap-2">
                         <Button
-                          variant={status ? 'outline' : 'default'}
+                          variant="default"
                           className="flex-1"
                           onClick={() => handleStartApplication(page.id)}
                         >
-                          {status ? (
-                            <>
-                              <MdVisibility className="w-4 h-4 mr-2" />
-                              View Application
-                            </>
-                          ) : (
-                            <>
-                              <MdAdd className="w-4 h-4 mr-2" />
-                              Start Application
-                            </>
-                          )}
+                          <MdAdd className="w-4 h-4 mr-2" />
+                          {applicationCount > 0 ? 'New Application' : 'Start Application'}
                         </Button>
+                        {applicationCount > 0 && (
+                          <Button
+                            variant="outline"
+                            onClick={() => navigate('/dashboard/my-applications')}
+                          >
+                            <MdVisibility className="w-4 h-4 mr-2" />
+                            View All
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </CardContent>

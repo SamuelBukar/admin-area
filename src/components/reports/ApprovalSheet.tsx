@@ -172,7 +172,7 @@ export const ApprovalSheet = ({ application, allocation, payment, onDownload }: 
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Amount</p>
-                  <p className="font-medium">${payment.amount.toLocaleString()}</p>
+                  <p className="font-medium">₦{payment.amount.toLocaleString()}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Fee Type</p>

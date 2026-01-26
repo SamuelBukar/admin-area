@@ -64,6 +64,9 @@ export const Navbar = () => {
   const navigationItems = allNavigationItems.filter(item => {
     if (item.adminOnly && !isAdmin) return false;
     
+    // For admin users, always show admin-only items (Pages, Builder, Users)
+    if (isAdmin && item.adminOnly) return true;
+    
     // Check permissions
     if (item.path === '/dashboard/builder' && !hasPermission('templates', 'create')) return false;
     if (item.path === '/dashboard/pages' && !hasPermission('pages', 'view')) return false;

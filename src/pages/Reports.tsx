@@ -15,10 +15,11 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MdSearch, MdArrowUpward, MdArrowDownward, MdVisibility, MdDescription, MdDownload } from 'react-icons/md';
+import { MdSearch, MdArrowUpward, MdArrowDownward, MdVisibility, MdDescription, MdDownload, MdEdit } from 'react-icons/md';
 import { useAuth } from '@/contexts/AuthContext';
-import { useApplications, useUserApplications } from '@/hooks/useQueries';
-import type { Application } from '@/types/application';
+import { useApplications, useUserApplications, useUpdateApplicationStatus, usePages } from '@/hooks/useQueries';
+import { UpdateApplicationStatusModal } from '@/components/modals/UpdateApplicationStatusModal';
+import type { Application, ApplicationStatus } from '@/types/application';
 import { format } from 'date-fns';
 
 type SortField = 'title' | 'type' | 'status' | 'submittedAt' | 'approvedAt' | 'createdAt';
@@ -32,6 +33,8 @@ export default function Reports() {
 
   const { data: allApplications, isLoading: allApplicationsLoading } = useApplications();
   const { data: userApplications, isLoading: userApplicationsLoading } = useUserApplications(userId);
+  const { data: pages } = usePages();
+  const updateStatus = useUpdateApplicationStatus();
 
   const applications = isAdmin ? (allApplications || []) : (userApplications || []);
   const isLoading = isAdmin ? allApplicationsLoading : userApplicationsLoading;
@@ -41,12 +44,16 @@ export default function Reports() {
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [statusModalOpen, setStatusModalOpen] = useState(false);
+  const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
 
   const filteredAndSortedApplications = useMemo(() => {
     let filtered = applications.filter((application) => {
       const matchesSearch = 
         application.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         application.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        application.applicantName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        application.applicantEmail?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (isAdmin && application.userId.toLowerCase().includes(searchQuery.toLowerCase()));
       
       const matchesStatus = statusFilter === 'all' || application.status === statusFilter;
@@ -133,6 +140,29 @@ export default function Reports() {
     navigate(`/dashboard/reports/${applicationId}`);
   };
 
+  const handleUpdateStatus = (application: Application) => {
+    setSelectedApplication(application);
+    setStatusModalOpen(true);
+  };
+
+  const handleStatusUpdate = (id: string, status: ApplicationStatus, rejectionReason?: string) => {
+    updateStatus.mutate(
+      { id, status, rejectionReason },
+      {
+        onSuccess: () => {
+          setStatusModalOpen(false);
+          setSelectedApplication(null);
+        },
+      }
+    );
+  };
+
+  const getPageTitle = (pageId?: string): string => {
+    if (!pageId || !pages) return '-';
+    const page = pages.find(p => p.id === pageId);
+    return page?.title || '-';
+  };
+
   return (
     <>
       <Helmet>
@@ -214,7 +244,7 @@ export default function Reports() {
                             onClick={() => handleSort('title')}
                             className="flex items-center hover:text-foreground"
                           >
-                            User ID
+                            Applicant
                             {getSortIcon('title')}
                           </button>
                         </TableHead>
@@ -280,12 +310,33 @@ export default function Reports() {
                     {filteredAndSortedApplications.map((application) => (
                       <TableRow key={application.id}>
                         {isAdmin && (
-                          <TableCell className="font-mono text-xs">{application.userId}</TableCell>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <div className="font-medium">{application.applicantName || 'Unknown'}</div>
+                              {application.applicant?.id && (
+                                <div className="text-xs text-muted-foreground font-mono">ID: {application.applicant.id}</div>
+                              )}
+                              <div className="text-xs text-muted-foreground">{application.applicantEmail || application.userId}</div>
+                              {application.applicantPhone && (
+                                <div className="text-xs text-muted-foreground">{application.applicantPhone}</div>
+                              )}
+                              {application.applicant?.type === 'company' && (
+                                <div className="text-xs text-blue-600 dark:text-blue-400">Company</div>
+                              )}
+                            </div>
+                          </TableCell>
                         )}
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            <MdDescription className="w-4 h-4 text-primary" />
-                            <span className="font-medium">{application.title}</span>
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <MdDescription className="w-4 h-4 text-primary" />
+                              <span className="font-medium">{application.title}</span>
+                            </div>
+                            {application.pageId && (
+                              <div className="text-xs text-muted-foreground ml-6">
+                                Form: {getPageTitle(application.pageId)}
+                              </div>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -313,6 +364,17 @@ export default function Reports() {
                               <MdVisibility className="w-4 h-4 mr-2" />
                               View Report
                             </Button>
+                            {isAdmin && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleUpdateStatus(application)}
+                                disabled={updateStatus.isPending}
+                              >
+                                <MdEdit className="w-4 h-4 mr-2" />
+                                Update Status
+                              </Button>
+                            )}
                             {!isAdmin && (
                               <Button
                                 variant="ghost"
@@ -336,6 +398,17 @@ export default function Reports() {
             )}
           </CardContent>
         </Card>
+
+        {/* Update Status Modal */}
+        {isAdmin && (
+          <UpdateApplicationStatusModal
+            open={statusModalOpen}
+            onOpenChange={setStatusModalOpen}
+            application={selectedApplication}
+            onUpdate={handleStatusUpdate}
+            isUpdating={updateStatus.isPending}
+          />
+        )}
       </div>
     </>
   );

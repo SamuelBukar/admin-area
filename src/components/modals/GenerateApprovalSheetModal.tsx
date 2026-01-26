@@ -118,7 +118,7 @@ export const GenerateApprovalSheetModal = ({
                     <SelectItem value="">None</SelectItem>
                     {availablePayments.map((payment) => (
                       <SelectItem key={payment.id} value={payment.id}>
-                        {payment.description} - ${payment.amount}
+                        {payment.description} - ₦{payment.amount}
                       </SelectItem>
                     ))}
                   </SelectContent>

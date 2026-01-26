@@ -2,6 +2,7 @@ export type UserRole = 'admin' | 'user';
 
 export interface Permission {
   pages: {
+    view: boolean;
     create: boolean;
     edit: boolean;
     delete: boolean;

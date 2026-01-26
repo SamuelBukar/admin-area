@@ -17,7 +17,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MdSearch, MdArrowUpward, MdArrowDownward, MdVisibility } from 'react-icons/md';
 import { useAuth } from '@/contexts/AuthContext';
-import { usePayments, useUserPayments } from '@/hooks/useQueries';
+import { usePayments, useUserPayments, useApplications } from '@/hooks/useQueries';
 import type { Payment } from '@/types/payment';
 import { format } from 'date-fns';
 
@@ -32,9 +32,23 @@ export default function Payments() {
 
   const { data: allPayments, isLoading: allPaymentsLoading } = usePayments();
   const { data: userPayments, isLoading: userPaymentsLoading } = useUserPayments(userId);
+  const { data: allApplications } = useApplications();
 
   const payments = isAdmin ? (allPayments || []) : (userPayments || []);
   const isLoading = isAdmin ? allPaymentsLoading : userPaymentsLoading;
+
+  // Helper to get applicant info from payment
+  const getApplicantInfo = (payment: Payment) => {
+    if (!payment.applicationId || !allApplications) return null;
+    const application = allApplications.find(app => app.id === payment.applicationId);
+    return application ? {
+      name: application.applicantName || 'Unknown',
+      email: application.applicantEmail || '',
+      phone: application.applicantPhone || '',
+      isCompany: application.applicant?.type === 'company',
+      id: application.applicant?.id || '',
+    } : null;
+  };
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -47,7 +61,14 @@ export default function Payments() {
       const matchesSearch = 
         payment.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
         payment.transactionId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (isAdmin && payment.userId.toLowerCase().includes(searchQuery.toLowerCase()));
+        (isAdmin && payment.userId.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (isAdmin && (() => {
+          const applicantInfo = getApplicantInfo(payment);
+          return applicantInfo ? 
+            applicantInfo.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            applicantInfo.email.toLowerCase().includes(searchQuery.toLowerCase())
+            : false;
+        })());
       
       const matchesStatus = statusFilter === 'all' || payment.status === statusFilter;
       const matchesFeeType = feeTypeFilter === 'all' || payment.feeType === feeTypeFilter;
@@ -213,7 +234,7 @@ export default function Payments() {
                             onClick={() => handleSort('description')}
                             className="flex items-center hover:text-foreground"
                           >
-                            User ID
+                            Applicant
                             {getSortIcon('description')}
                           </button>
                         </TableHead>
@@ -268,13 +289,33 @@ export default function Payments() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredAndSortedPayments.map((payment) => (
+                    {filteredAndSortedPayments.map((payment) => {
+                      const applicantInfo = getApplicantInfo(payment);
+                      return (
                       <TableRow key={payment.id}>
                         {isAdmin && (
-                          <TableCell className="font-mono text-xs">{payment.userId}</TableCell>
+                          <TableCell>
+                            {applicantInfo ? (
+                              <div className="space-y-1">
+                                <div className="font-medium">{applicantInfo.name}</div>
+                                {applicantInfo.id && (
+                                  <div className="text-xs text-muted-foreground font-mono">ID: {applicantInfo.id}</div>
+                                )}
+                                <div className="text-xs text-muted-foreground">{applicantInfo.email || payment.userId}</div>
+                                {applicantInfo.phone && (
+                                  <div className="text-xs text-muted-foreground">{applicantInfo.phone}</div>
+                                )}
+                                {applicantInfo.isCompany && (
+                                  <div className="text-xs text-blue-600 dark:text-blue-400">Company</div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="font-mono text-xs">{payment.userId}</div>
+                            )}
+                          </TableCell>
                         )}
                         <TableCell className="font-medium">{payment.description}</TableCell>
-                        <TableCell>${payment.amount.toLocaleString()}</TableCell>
+                        <TableCell>₦{payment.amount.toLocaleString()}</TableCell>
                         <TableCell>{getStatusBadge(payment.status)}</TableCell>
                         <TableCell>
                           <span className="text-sm text-muted-foreground">
@@ -298,7 +339,8 @@ export default function Payments() {
                           </Button>
                         </TableCell>
                       </TableRow>
-                    ))}
+                    );
+                    })}
                   </TableBody>
                 </Table>
               </div>

@@ -17,7 +17,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MdSearch, MdArrowUpward, MdArrowDownward, MdVisibility, MdLocationOn } from 'react-icons/md';
 import { useAuth } from '@/contexts/AuthContext';
-import { useAllocations, useUserAllocations } from '@/hooks/useQueries';
+import { useAllocations, useUserAllocations, useApplications } from '@/hooks/useQueries';
 import type { Allocation } from '@/types/allocation';
 import { format } from 'date-fns';
 
@@ -32,9 +32,23 @@ export default function Allocations() {
 
   const { data: allAllocations, isLoading: allAllocationsLoading } = useAllocations();
   const { data: userAllocations, isLoading: userAllocationsLoading } = useUserAllocations(userId);
+  const { data: allApplications } = useApplications();
 
   const allocations = isAdmin ? (allAllocations || []) : (userAllocations || []);
   const isLoading = isAdmin ? allAllocationsLoading : userAllocationsLoading;
+
+  // Helper to get applicant info from allocation
+  const getApplicantInfo = (allocation: Allocation) => {
+    if (!allocation.applicationId || !allApplications) return null;
+    const application = allApplications.find(app => app.id === allocation.applicationId);
+    return application ? {
+      name: application.applicantName || 'Unknown',
+      email: application.applicantEmail || '',
+      phone: application.applicantPhone || '',
+      isCompany: application.applicant?.type === 'company',
+      id: application.applicant?.id || '',
+    } : null;
+  };
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -47,7 +61,14 @@ export default function Allocations() {
       const matchesSearch = 
         allocation.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
         allocation.parcelNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (isAdmin && allocation.userId.toLowerCase().includes(searchQuery.toLowerCase()));
+        (isAdmin && allocation.userId.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (isAdmin && (() => {
+          const applicantInfo = getApplicantInfo(allocation);
+          return applicantInfo ? 
+            applicantInfo.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            applicantInfo.email.toLowerCase().includes(searchQuery.toLowerCase())
+            : false;
+        })());
       
       const matchesStatus = statusFilter === 'all' || allocation.status === statusFilter;
       const matchesType = typeFilter === 'all' || allocation.type === typeFilter;
@@ -208,7 +229,7 @@ export default function Allocations() {
                             onClick={() => handleSort('location')}
                             className="flex items-center hover:text-foreground"
                           >
-                            User ID
+                            Applicant
                             {getSortIcon('location')}
                           </button>
                         </TableHead>
@@ -264,10 +285,30 @@ export default function Allocations() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredAndSortedAllocations.map((allocation) => (
+                    {filteredAndSortedAllocations.map((allocation) => {
+                      const applicantInfo = getApplicantInfo(allocation);
+                      return (
                       <TableRow key={allocation.id}>
                         {isAdmin && (
-                          <TableCell className="font-mono text-xs">{allocation.userId}</TableCell>
+                          <TableCell>
+                            {applicantInfo ? (
+                              <div className="space-y-1">
+                                <div className="font-medium">{applicantInfo.name}</div>
+                                {applicantInfo.id && (
+                                  <div className="text-xs text-muted-foreground font-mono">ID: {applicantInfo.id}</div>
+                                )}
+                                <div className="text-xs text-muted-foreground">{applicantInfo.email || allocation.userId}</div>
+                                {applicantInfo.phone && (
+                                  <div className="text-xs text-muted-foreground">{applicantInfo.phone}</div>
+                                )}
+                                {applicantInfo.isCompany && (
+                                  <div className="text-xs text-blue-600 dark:text-blue-400">Company</div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="font-mono text-xs">{allocation.userId}</div>
+                            )}
+                          </TableCell>
                         )}
                         <TableCell>
                           <div className="flex items-center gap-2">
@@ -304,7 +345,8 @@ export default function Allocations() {
                           </Button>
                         </TableCell>
                       </TableRow>
-                    ))}
+                    );
+                    })}
                   </TableBody>
                 </Table>
               </div>

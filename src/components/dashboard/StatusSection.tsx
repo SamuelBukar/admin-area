@@ -110,28 +110,28 @@ export const StatusSection = ({ applicationStats, paymentSummary, isLoading }: S
                   <MdPayment className="w-6 h-6 text-green-600 dark:text-green-400" />
                 </div>
                 <span className="text-xs font-medium text-muted-foreground mb-1">Paid</span>
-                <span className="text-lg font-bold text-foreground">${paymentSummary?.paid.toLocaleString() || 0}</span>
+                <span className="text-lg font-bold text-foreground">₦{paymentSummary?.paid.toLocaleString() || 0}</span>
               </div>
               <div className="flex flex-col items-center p-4 rounded-xl border-2 border-yellow-200 dark:border-yellow-800 bg-yellow-50/50 dark:bg-yellow-950/20 hover:bg-yellow-100 dark:hover:bg-yellow-950/30 transition-colors group">
                 <div className="p-2 rounded-lg bg-yellow-100 dark:bg-yellow-900/30 mb-2 group-hover:scale-110 transition-transform">
                   <MdPending className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
                 </div>
                 <span className="text-xs font-medium text-muted-foreground mb-1">Pending</span>
-                <span className="text-lg font-bold text-foreground">${paymentSummary?.pending.toLocaleString() || 0}</span>
+                <span className="text-lg font-bold text-foreground">₦{paymentSummary?.pending.toLocaleString() || 0}</span>
               </div>
               <div className="flex flex-col items-center p-4 rounded-xl border-2 border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-950/20 hover:bg-red-100 dark:hover:bg-red-950/30 transition-colors group">
                 <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/30 mb-2 group-hover:scale-110 transition-transform">
                   <MdErrorOutline className="w-6 h-6 text-red-600 dark:text-red-400" />
                 </div>
                 <span className="text-xs font-medium text-muted-foreground mb-1">Failed</span>
-                <span className="text-lg font-bold text-foreground">${paymentSummary?.failed.toLocaleString() || 0}</span>
+                <span className="text-lg font-bold text-foreground">₦{paymentSummary?.failed.toLocaleString() || 0}</span>
               </div>
               <div className="flex flex-col items-center p-4 rounded-xl border-2 border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-950/20 hover:bg-gray-100 dark:hover:bg-gray-950/30 transition-colors group">
                 <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-900/30 mb-2 group-hover:scale-110 transition-transform">
                   <MdPayment className="w-6 h-6 text-gray-600 dark:text-gray-400" />
                 </div>
                 <span className="text-xs font-medium text-muted-foreground mb-1">Refunded</span>
-                <span className="text-lg font-bold text-foreground">${paymentSummary?.refunded.toLocaleString() || 0}</span>
+                <span className="text-lg font-bold text-foreground">₦{paymentSummary?.refunded.toLocaleString() || 0}</span>
               </div>
             </div>
           </div>

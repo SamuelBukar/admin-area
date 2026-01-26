@@ -12,6 +12,7 @@ import { apiGet, apiPost, apiPut, apiPatch, apiDelete } from './apiClient';
 import type { FormElement } from '@/types/builder';
 import type { Payment, PaymentSummary } from '@/types/payment';
 import type { Application, ApplicationStats, ApplicationStatusHistory } from '@/types/application';
+import { extractApplicantFromFormData, getApplicantName, getApplicantEmail, getApplicantPhone } from './applicantUtils';
 import type { Allocation, AllocationStats } from '@/types/allocation';
 import type { Expense, ExpenseChartData, ExpenseSummary } from '@/types/expense';
 import type { UserDashboardStats, ProgressMetrics } from '@/types/dashboard';
@@ -41,6 +42,11 @@ export interface Page {
   elements: FormElement[];
   publishedAt?: string;
   createdBy?: string;
+  // New fields for template/page distinction
+  isTemplate?: boolean; // true if this is a template, false if it's a named page
+  isNamed?: boolean; // true if template has been given a name
+  templateIds?: string[]; // Array of template IDs linked together to form a page
+  description?: string;
 }
 
 import type { UserRole, Permission } from '@/types/auth';
@@ -99,6 +105,50 @@ export const dashboardApi = {
 export const pagesApi = {
   getAll: async (): Promise<Page[]> => {
     await delay(500);
+    
+    // Get from localStorage first (for templates and pages)
+    const savedPages = localStorage.getItem('landadmin-pages');
+    if (savedPages) {
+      try {
+        const pages: Page[] = JSON.parse(savedPages);
+        // Merge with default pages for demo
+        const defaultPages: Page[] = [
+          {
+            id: '1',
+            title: 'Contact Form',
+            slug: '/contact',
+            status: 'published',
+            updatedAt: '2 hours ago',
+            views: 245,
+            templateId: 'template-1',
+            elements: [],
+            publishedAt: '2024-01-15T10:00:00Z',
+            createdBy: 'user-1',
+            isTemplate: false,
+            isNamed: true,
+          },
+          {
+            id: '2',
+            title: 'Employee Registration',
+            slug: '/employee-form',
+            status: 'published',
+            updatedAt: '1 day ago',
+            views: 189,
+            templateId: 'template-2',
+            elements: [],
+            publishedAt: '2024-01-14T10:00:00Z',
+            createdBy: 'user-1',
+            isTemplate: false,
+            isNamed: true,
+          },
+        ];
+        return [...pages, ...defaultPages.filter(p => !pages.find(sp => sp.id === p.id))];
+      } catch (error) {
+        console.error('Failed to parse saved pages:', error);
+      }
+    }
+    
+    // Return default pages
     return [
       {
         id: '1',
@@ -111,6 +161,8 @@ export const pagesApi = {
         elements: [],
         publishedAt: '2024-01-15T10:00:00Z',
         createdBy: 'user-1',
+        isTemplate: false,
+        isNamed: true,
       },
       {
         id: '2',
@@ -123,6 +175,8 @@ export const pagesApi = {
         elements: [],
         publishedAt: '2024-01-14T10:00:00Z',
         createdBy: 'user-1',
+        isTemplate: false,
+        isNamed: true,
       },
       {
         id: '3',
@@ -134,6 +188,8 @@ export const pagesApi = {
         templateId: 'template-3',
         elements: [],
         createdBy: 'user-2',
+        isTemplate: false,
+        isNamed: true,
       },
       {
         id: '4',
@@ -146,13 +202,15 @@ export const pagesApi = {
         elements: [],
         publishedAt: '2024-01-08T10:00:00Z',
         createdBy: 'user-1',
+        isTemplate: false,
+        isNamed: true,
       },
     ];
   },
 
   create: async (data: Partial<Page>): Promise<Page> => {
     await delay(800);
-    return {
+    const newPage: Page = {
       id: crypto.randomUUID(),
       title: data.title || 'New Page',
       slug: data.slug || '/new-page',
@@ -163,11 +221,114 @@ export const pagesApi = {
       elements: data.elements || [],
       publishedAt: data.status === 'published' ? new Date().toISOString() : undefined,
       createdBy: data.createdBy,
+      isTemplate: data.isTemplate ?? false,
+      isNamed: data.isNamed ?? (!!data.title),
+      templateIds: data.templateIds,
+      description: data.description,
     };
+    
+    // Save to localStorage
+    const savedPages = localStorage.getItem('landadmin-pages');
+    const pages: Page[] = savedPages ? JSON.parse(savedPages) : [];
+    pages.push(newPage);
+    localStorage.setItem('landadmin-pages', JSON.stringify(pages));
+    
+    return newPage;
+  },
+
+  // Save a template (auto-saved from builder)
+  saveTemplate: async (elements: FormElement[], userId?: string): Promise<Page> => {
+    await delay(500);
+    const templateId = crypto.randomUUID();
+    const newTemplate: Page = {
+      id: templateId,
+      title: 'Unnamed Template',
+      slug: `/template-${templateId.substring(0, 8)}`,
+      status: 'draft',
+      updatedAt: 'Just now',
+      views: 0,
+      elements,
+      isTemplate: true,
+      isNamed: false,
+      createdBy: userId,
+    };
+    
+    // Save to localStorage
+    const savedPages = localStorage.getItem('landadmin-pages');
+    const pages: Page[] = savedPages ? JSON.parse(savedPages) : [];
+    pages.push(newTemplate);
+    localStorage.setItem('landadmin-pages', JSON.stringify(pages));
+    
+    return newTemplate;
+  },
+
+  // Link templates together and name the page
+  linkTemplates: async (templateIds: string[], pageData: { title: string; slug: string; description?: string; status?: 'published' | 'draft' }): Promise<Page> => {
+    await delay(800);
+    
+    // Get all templates
+    const savedPages = localStorage.getItem('landadmin-pages');
+    const pages: Page[] = savedPages ? JSON.parse(savedPages) : [];
+    
+    // Get templates to link in the specified order
+    const templates: Page[] = [];
+    templateIds.forEach(id => {
+      const template = pages.find(p => p.id === id && p.isTemplate);
+      if (template) {
+        templates.push(template);
+      }
+    });
+    
+    // Combine all elements from templates in order
+    const combinedElements: FormElement[] = [];
+    templates.forEach(template => {
+      combinedElements.push(...(template.elements || []));
+    });
+    
+    // Create new page from linked templates
+    const newPage: Page = {
+      id: crypto.randomUUID(),
+      title: pageData.title,
+      slug: pageData.slug,
+      status: pageData.status || 'draft',
+      updatedAt: 'Just now',
+      views: 0,
+      elements: combinedElements,
+      isTemplate: false,
+      isNamed: true,
+      templateIds, // Preserve order
+      description: pageData.description,
+      publishedAt: pageData.status === 'published' ? new Date().toISOString() : undefined,
+    };
+    
+    // Update templates to mark them as named
+    const updatedPages = pages.map(p => {
+      if (templateIds.includes(p.id)) {
+        return { ...p, isNamed: true };
+      }
+      return p;
+    });
+    
+    // Add new page
+    updatedPages.push(newPage);
+    localStorage.setItem('landadmin-pages', JSON.stringify(updatedPages));
+    
+    return newPage;
   },
 
   delete: async (id: string): Promise<void> => {
     await delay(500);
+    // Delete from localStorage
+    const savedPages = localStorage.getItem('landadmin-pages');
+    if (savedPages) {
+      try {
+        const pages: Page[] = JSON.parse(savedPages);
+        const filtered = pages.filter(p => p.id !== id);
+        localStorage.setItem('landadmin-pages', JSON.stringify(filtered));
+      } catch (error) {
+        console.error('Failed to delete page from localStorage:', error);
+      }
+    }
     // In production, this would delete from the database
   },
 
@@ -416,7 +577,7 @@ const initializeMockData = () => {
       userId: '1',
       applicationId: 'app-1',
       amount: 5000,
-      currency: 'USD',
+      currency: 'NGN',
       status: 'paid',
       paymentMethod: 'online',
       transactionId: 'txn_123456',
@@ -432,7 +593,7 @@ const initializeMockData = () => {
       userId: '1',
       applicationId: 'app-2',
       amount: 3000,
-      currency: 'USD',
+      currency: 'NGN',
       status: 'pending',
       paymentMethod: 'online',
       dueDate: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString(),
@@ -446,7 +607,7 @@ const initializeMockData = () => {
       userId: '2',
       applicationId: 'app-3',
       amount: 7500,
-      currency: 'USD',
+      currency: 'NGN',
       status: 'paid',
       paymentMethod: 'bank_transfer',
       transactionId: 'txn_789012',
@@ -472,6 +633,23 @@ const initializeMockData = () => {
       priority: 'high',
       title: 'Land Allocation Request - Parcel A',
       description: 'Request for land allocation in Zone 1',
+      applicant: {
+        type: 'person',
+        id: 'appl-001',
+        firstName: 'John',
+        lastName: 'Doe',
+        email: 'john.doe@example.com',
+        phone: '+1-555-0101',
+        address: '123 Main Street',
+        city: 'New York',
+        state: 'NY',
+        zipCode: '10001',
+        country: 'USA',
+        occupation: 'Business Owner',
+      },
+      applicantName: 'John Doe',
+      applicantEmail: 'john.doe@example.com',
+      applicantPhone: '+1-555-0101',
       createdAt: new Date(now.getTime() - 20 * 24 * 60 * 60 * 1000).toISOString(),
       updatedAt: new Date(now.getTime() - 8 * 24 * 60 * 60 * 1000).toISOString(),
     },
@@ -485,6 +663,33 @@ const initializeMockData = () => {
       priority: 'medium',
       title: 'Resource Allocation Request',
       description: 'Request for resource allocation',
+      applicant: {
+        type: 'company',
+        id: 'appl-002',
+        companyName: 'Acme Corporation',
+        registrationNumber: 'REG-12345',
+        taxId: 'TAX-98765',
+        email: 'info@acmecorp.com',
+        phone: '+1-555-0202',
+        website: 'https://acmecorp.com',
+        address: '456 Business Ave',
+        city: 'Los Angeles',
+        state: 'CA',
+        zipCode: '90001',
+        country: 'USA',
+        contactPerson: {
+          firstName: 'Jane',
+          lastName: 'Smith',
+          email: 'jane.smith@acmecorp.com',
+          phone: '+1-555-0203',
+          position: 'Operations Manager',
+        },
+        industry: 'Technology',
+        yearEstablished: 2010,
+      },
+      applicantName: 'Acme Corporation',
+      applicantEmail: 'info@acmecorp.com',
+      applicantPhone: '+1-555-0202',
       createdAt: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString(),
       updatedAt: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     },
@@ -497,6 +702,23 @@ const initializeMockData = () => {
       priority: 'low',
       title: 'Land Allocation Request - Parcel B',
       description: 'Request for land allocation in Zone 2',
+      applicant: {
+        type: 'person',
+        id: 'appl-003',
+        firstName: 'Jane',
+        lastName: 'Smith',
+        email: 'jane.smith@example.com',
+        phone: '+1-555-0303',
+        address: '789 Oak Street',
+        city: 'Chicago',
+        state: 'IL',
+        zipCode: '60601',
+        country: 'USA',
+        occupation: 'Architect',
+      },
+      applicantName: 'Jane Smith',
+      applicantEmail: 'jane.smith@example.com',
+      applicantPhone: '+1-555-0303',
       createdAt: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(),
       updatedAt: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString(),
     },
@@ -592,7 +814,7 @@ export const paymentsApi = {
       userId: data.userId || '',
       applicationId: data.applicationId,
       amount: data.amount || 0,
-      currency: data.currency || 'USD',
+      currency: data.currency || 'NGN',
       status: data.status || 'pending',
       paymentMethod: data.paymentMethod || 'online',
       transactionId: data.transactionId,
@@ -657,6 +879,13 @@ export const applicationsApi = {
 
   create: async (data: Partial<Application>): Promise<Application> => {
     await delay(800);
+    
+    // Extract applicant data from formData if available
+    let applicant = data.applicant;
+    if (!applicant && data.formData) {
+      applicant = extractApplicantFromFormData(data.formData);
+    }
+    
     const newApp: Application = {
       id: crypto.randomUUID(),
       userId: data.userId || '',
@@ -672,6 +901,10 @@ export const applicationsApi = {
       title: data.title || 'New Application',
       description: data.description,
       formData: data.formData,
+      applicant,
+      applicantName: data.applicantName || (applicant ? getApplicantName(applicant) : undefined),
+      applicantEmail: data.applicantEmail || (applicant ? getApplicantEmail(applicant) : undefined),
+      applicantPhone: data.applicantPhone || (applicant ? getApplicantPhone(applicant) : undefined),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -684,6 +917,10 @@ export const applicationsApi = {
     // Get page to extract title
     const page = await pagesApi.getById(pageId);
     const now = new Date().toISOString();
+    
+    // Extract applicant data from formData
+    const applicant = extractApplicantFromFormData(formData);
+    
     const newApp: Application = {
       id: crypto.randomUUID(),
       userId,
@@ -695,6 +932,10 @@ export const applicationsApi = {
       title: page.title || 'Application',
       description: `Application submitted from ${page.title}`,
       formData,
+      applicant,
+      applicantName: applicant ? getApplicantName(applicant) : undefined,
+      applicantEmail: applicant ? getApplicantEmail(applicant) : undefined,
+      applicantPhone: applicant ? getApplicantPhone(applicant) : undefined,
       createdAt: now,
       updatedAt: now,
     };

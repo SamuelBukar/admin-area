@@ -15,7 +15,7 @@ import { MdArrowBack, MdSave, MdSend } from 'react-icons/md';
 import { usePageDetail } from '@/hooks/useQueries';
 import { useSubmitApplication } from '@/hooks/useQueries';
 import { useAuth } from '@/contexts/AuthContext';
-import { FormElement, InputContent, SelectContent as SelectContentType, RadioContent, CheckboxContent } from '@/types/builder';
+import { FormElement, InputContent, SelectContent as SelectContentType, RadioContent, CheckboxContent, GridContent, ContainerContent, SpaceContent, ImageContent, ButtonContent } from '@/types/builder';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
@@ -28,37 +28,84 @@ export default function ApplicationForm() {
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Recursively initialize form data for all elements including nested ones
+  const initializeFormData = (elements: FormElement[]): Record<string, any> => {
+    const initialData: Record<string, any> = {};
+    
+    const processElement = (element: FormElement) => {
+      if (element.type === 'INPUT' || element.type === 'TEXTAREA' || element.type === 'DATE') {
+        initialData[element.id] = '';
+      } else if (element.type === 'CHECKBOX') {
+        initialData[element.id] = false;
+      } else if (element.type === 'SELECT' || element.type === 'RADIO') {
+        initialData[element.id] = '';
+      } else if (element.type === 'CONTAINER') {
+        const containerContent = element.content as ContainerContent;
+        if (containerContent.children) {
+          containerContent.children.forEach(processElement);
+        }
+      } else if (element.type === 'GRID') {
+        const gridContent = element.content as GridContent;
+        if (gridContent.children) {
+          gridContent.children.forEach(column => {
+            column.forEach(processElement);
+          });
+        }
+      }
+    };
+    
+    elements.forEach(processElement);
+    return initialData;
+  };
+
   useEffect(() => {
     if (page?.elements) {
-      // Initialize form data with empty values
-      const initialData: Record<string, any> = {};
-      page.elements.forEach((element) => {
-        if (element.type === 'INPUT' || element.type === 'TEXTAREA' || element.type === 'DATE') {
-          initialData[element.id] = '';
-        } else if (element.type === 'CHECKBOX') {
-          initialData[element.id] = false;
-        } else if (element.type === 'SELECT' || element.type === 'RADIO') {
-          initialData[element.id] = '';
-        }
-      });
+      const initialData = initializeFormData(page.elements);
       setFormData(initialData);
     }
   }, [page]);
+
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
     
     if (!page?.elements) return false;
 
-    page.elements.forEach((element) => {
-      if (element.type === 'INPUT' || element.type === 'TEXTAREA' || element.type === 'DATE') {
-        const content = element.content as InputContent;
-        if (content.required && !formData[element.id]) {
-          newErrors[element.id] = `${content.label} is required`;
+    // Use a helper function to validate recursively
+    const validateRecursive = (elements: FormElement[]) => {
+      elements.forEach(element => {
+        if (element.type === 'INPUT' || element.type === 'TEXTAREA' || element.type === 'DATE') {
+          const content = element.content as InputContent;
+          if (content.required && !formData[element.id]) {
+            newErrors[element.id] = `${content.label} is required`;
+          }
+        } else if (element.type === 'SELECT') {
+          const content = element.content as SelectContentType;
+          if (content.required && !formData[element.id]) {
+            newErrors[element.id] = `${content.label} is required`;
+          }
+        } else if (element.type === 'RADIO') {
+          const content = element.content as RadioContent;
+          if (content.required && !formData[element.id]) {
+            newErrors[element.id] = `${content.label} is required`;
+          }
+        } else if (element.type === 'CONTAINER') {
+          const containerContent = element.content as ContainerContent;
+          if (containerContent.children) {
+            validateRecursive(containerContent.children);
+          }
+        } else if (element.type === 'GRID') {
+          const gridContent = element.content as GridContent;
+          if (gridContent.children) {
+            gridContent.children.forEach(column => {
+              validateRecursive(column);
+            });
+          }
         }
-      }
-    });
+      });
+    };
 
+    validateRecursive(page.elements);
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -81,7 +128,22 @@ export default function ApplicationForm() {
         formData,
         status,
       });
-      navigate('/dashboard/my-applications');
+      // Show success message and allow user to submit again or view applications
+      if (status === 'submitted') {
+        toast.success('Application submitted successfully! You can submit another application if needed.');
+      } else {
+        toast.success('Application saved as draft');
+      }
+      // Reset form data for new application
+      if (page?.elements) {
+        const initialData = initializeFormData(page.elements);
+        setFormData(initialData);
+        setErrors({});
+      }
+      // Navigate to my applications after a short delay
+      setTimeout(() => {
+        navigate('/dashboard/my-applications');
+      }, 1500);
     } catch (error) {
       console.error('Submit error:', error);
     }
@@ -172,11 +234,11 @@ export default function ApplicationForm() {
               {selectContent.required && <span className="text-destructive ml-1">*</span>}
             </Label>
             <Select
-              value={value}
+              value={value || undefined}
               onValueChange={(val) => setFormData({ ...formData, [element.id]: val })}
             >
               <SelectTrigger className={errors[element.id] ? 'border-destructive' : ''}>
-                <SelectValue placeholder={selectContent.placeholder || 'Select an option'} />
+                <SelectValue placeholder="Select an option" />
               </SelectTrigger>
               <SelectContent>
                 {selectContent.options?.map((option, index) => (
@@ -239,11 +301,108 @@ export default function ApplicationForm() {
         );
       }
 
-      case 'CONTAINER':
-      case 'GRID':
-      case 'SPACE':
-        // These container elements don't render directly in form mode
-        return null;
+      case 'CONTAINER': {
+        const containerContent = element.content as ContainerContent;
+        const elementStyle = element.styles || {};
+        return (
+          <div 
+            className="border-2 border-dashed rounded-lg p-4 mb-4 bg-muted/20" 
+            style={elementStyle}
+          >
+            {containerContent.title && (
+              <h3 className="text-lg font-semibold mb-3">{containerContent.title}</h3>
+            )}
+            <div className="space-y-4">
+              {containerContent.children?.map((child) => (
+                <div key={child.id}>
+                  {renderElement(child)}
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      }
+
+      case 'GRID': {
+        const gridContent = element.content as GridContent;
+        const elementStyle = element.styles || {};
+        const gridColumns = gridContent.columns || 2;
+        return (
+          <div 
+            className={`grid gap-4 mb-4`}
+            style={{
+              ...elementStyle,
+              gridTemplateColumns: `repeat(${gridColumns}, 1fr)`,
+            }}
+          >
+            {gridContent.children?.map((column, colIndex) => (
+              <div key={colIndex} className="space-y-4">
+                {column.map((child) => (
+                  <div key={child.id}>
+                    {renderElement(child)}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        );
+      }
+
+      case 'SPACE': {
+        const spaceContent = element.content as SpaceContent;
+        return (
+          <div style={{ height: `${spaceContent.height || 40}px` }} />
+        );
+      }
+
+      case 'IMAGE': {
+        const imageContent = element.content as ImageContent;
+        if (!imageContent.url) return null;
+        return (
+          <div className="mb-4" style={{ textAlign: imageContent.alignment || 'center', ...elementStyle }}>
+            <img
+              src={imageContent.url}
+              alt={imageContent.alt || 'Form image'}
+              style={{
+                width: imageContent.width || '100%',
+                height: imageContent.height || 'auto',
+                maxWidth: '100%',
+              }}
+              className="rounded-lg"
+            />
+          </div>
+        );
+      }
+
+      case 'BUTTON': {
+        const buttonContent = element.content as ButtonContent;
+        const handleButtonClick = async (e: React.MouseEvent) => {
+          e.preventDefault();
+          if (buttonContent.actionType === 'link' && buttonContent.link) {
+            if (buttonContent.openInNewTab) {
+              window.open(buttonContent.link, '_blank', 'noopener,noreferrer');
+            } else {
+              window.location.href = buttonContent.link;
+            }
+          } else if (buttonContent.actionType === 'api' && buttonContent.apiEndpoint) {
+            toast.info('API action triggered', {
+              description: `Calling ${buttonContent.apiMethod || 'GET'} ${buttonContent.apiEndpoint}`,
+            });
+            // In a real app, you would make the API call here
+          }
+        };
+        return (
+          <div className="mb-4" style={elementStyle}>
+            <Button
+              type="button"
+              onClick={handleButtonClick}
+              variant="default"
+            >
+              {buttonContent.label}
+            </Button>
+          </div>
+        );
+      }
 
       default:
         return null;
@@ -307,7 +466,10 @@ export default function ApplicationForm() {
             <CardTitle>Application Form</CardTitle>
           </CardHeader>
           <CardContent>
-            <form className="space-y-6">
+            <form className="space-y-6" onSubmit={(e) => {
+              e.preventDefault();
+              handleSubmit('submitted');
+            }}>
               {page.elements?.map((element) => (
                 <div key={element.id}>
                   {renderElement(element)}

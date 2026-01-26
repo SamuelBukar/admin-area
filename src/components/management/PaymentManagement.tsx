@@ -152,7 +152,7 @@ export const PaymentManagement = ({ payments, isLoading }: PaymentManagementProp
                     <TableRow key={payment.id}>
                       <TableCell className="font-mono text-xs">{payment.userId}</TableCell>
                       <TableCell className="font-medium">{payment.description}</TableCell>
-                      <TableCell>${payment.amount.toLocaleString()}</TableCell>
+                      <TableCell>₦{payment.amount.toLocaleString()}</TableCell>
                       <TableCell>{getStatusBadge(payment.status)}</TableCell>
                       <TableCell>
                         <span className="text-sm text-muted-foreground">
