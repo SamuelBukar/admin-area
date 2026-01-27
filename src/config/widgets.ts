@@ -153,6 +153,96 @@ export const WIDGET_CONFIGS: WidgetConfig[] = [
     },
     category: 'input',
   },
+
+  // Advanced Input Bundles
+  {
+    type: 'NAME',
+    label: 'Full Name (NG)',
+    icon: 'MdPerson',
+    defaultContent: {
+      label: 'Full Name',
+      firstNameLabel: 'First Name',
+      middleNameLabel: 'Middle Name (Optional)',
+      lastNameLabel: 'Last Name',
+      firstRequired: true,
+      lastRequired: true,
+    },
+    category: 'input',
+  },
+  {
+    type: 'ADDRESS',
+    label: 'Address',
+    icon: 'MdLocationOn',
+    defaultContent: {
+      label: 'Residential Address',
+      placeholder: 'House No, Street, Area...',
+      required: true,
+    },
+    category: 'input',
+  },
+  {
+    type: 'NIGERIA_STATE',
+    label: 'State (Nigeria)',
+    icon: 'MdMap',
+    defaultContent: {
+      label: 'State of Residence',
+      required: true,
+    },
+    category: 'input',
+  },
+  {
+    type: 'NIGERIA_CITY',
+    label: 'City / LGA (Nigeria)',
+    icon: 'MdLocationCity',
+    defaultContent: {
+      label: 'City / LGA',
+      required: true,
+    },
+    category: 'input',
+  },
+  {
+    type: 'COUNTRY',
+    label: 'Country (NG Focus)',
+    icon: 'MdPublic',
+    defaultContent: {
+      label: 'Country',
+      required: true,
+      options: ['Nigeria'],
+    },
+    category: 'input',
+  },
+  {
+    type: 'PHONE',
+    label: 'Phone Number (NG)',
+    icon: 'MdPhone',
+    defaultContent: {
+      label: 'Phone Number',
+      placeholder: '+234XXXXXXXXXX',
+      required: true,
+    },
+    category: 'input',
+  },
+  {
+    type: 'NUMBER',
+    label: 'Number',
+    icon: 'MdPin',
+    defaultContent: {
+      label: 'Numeric Field',
+      placeholder: 'Enter number...',
+      required: false,
+    },
+    category: 'input',
+  },
+  {
+    type: 'PASSPORT_IMAGE',
+    label: 'Passport Photograph',
+    icon: 'MdAccountBox',
+    defaultContent: {
+      label: 'Passport Photograph',
+      required: true,
+    },
+    category: 'input',
+  },
 ];
 
 export const getWidgetConfig = (type: string): WidgetConfig | undefined => {

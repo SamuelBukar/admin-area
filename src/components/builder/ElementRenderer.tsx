@@ -1,4 +1,23 @@
-import { FormElement, InputContent, SelectContent, RadioContent, CheckboxContent, GridContent, ContainerContent, SpaceContent, ImageContent, ButtonContent } from '@/types/builder';
+import { 
+  FormElement, 
+  InputContent, 
+  SelectContent, 
+  RadioContent, 
+  CheckboxContent, 
+  GridContent, 
+  ContainerContent, 
+  SpaceContent, 
+  ImageContent, 
+  ButtonContent,
+  NameContent,
+  AddressContent,
+  PhoneContent,
+  NumberContent,
+  NigeriaStateContent,
+  NigeriaCityContent,
+  CountryContent,
+  PassportImageContent,
+} from '@/types/builder';
 import { MdClose, MdDragIndicator, MdEdit, MdAdd } from 'react-icons/md';
 import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
@@ -310,6 +329,165 @@ export const ElementRenderer = ({ element, onDelete, onUpdate, onDropInContainer
         );
       }
 
+      case 'NUMBER': {
+        const numberContent = element.content as NumberContent;
+        const handleLabelClick = () => {
+          setIsEditingLabel(true);
+          setLabelValue(numberContent.label);
+        };
+        const handleLabelBlur = () => {
+          setIsEditingLabel(false);
+          if (labelValue !== numberContent.label) {
+            onUpdate(element.id, { ...numberContent, label: labelValue }, element.styles);
+          }
+        };
+        const handleLabelKeyDown = (e: React.KeyboardEvent) => {
+          if (e.key === 'Enter') {
+            handleLabelBlur();
+          } else if (e.key === 'Escape') {
+            setLabelValue(numberContent.label);
+            setIsEditingLabel(false);
+          }
+        };
+        return (
+          <div className="space-y-2" style={elementStyle}>
+            {isEditingLabel ? (
+              <Input
+                value={labelValue}
+                onChange={(e) => setLabelValue(e.target.value)}
+                onBlur={handleLabelBlur}
+                onKeyDown={handleLabelKeyDown}
+                autoFocus
+                className="text-sm font-medium border-primary h-7"
+                onClick={(e) => e.stopPropagation()}
+              />
+            ) : (
+              <Label
+                className="text-sm font-medium text-foreground cursor-text hover:bg-accent/50 px-1 py-0.5 rounded"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleLabelClick();
+                }}
+              >
+                {numberContent.label}
+                {numberContent.required && <span className="text-destructive ml-1">*</span>}
+              </Label>
+            )}
+            <Input 
+              type="number"
+              placeholder={numberContent.placeholder}
+              className="print:border-0 print:border-b print:border-dotted print:rounded-none"
+            />
+          </div>
+        );
+      }
+
+      case 'PHONE': {
+        const phoneContent = element.content as PhoneContent;
+        const handleLabelClick = () => {
+          setIsEditingLabel(true);
+          setLabelValue(phoneContent.label);
+        };
+        const handleLabelBlur = () => {
+          setIsEditingLabel(false);
+          if (labelValue !== phoneContent.label) {
+            onUpdate(element.id, { ...phoneContent, label: labelValue }, element.styles);
+          }
+        };
+        const handleLabelKeyDown = (e: React.KeyboardEvent) => {
+          if (e.key === 'Enter') {
+            handleLabelBlur();
+          } else if (e.key === 'Escape') {
+            setLabelValue(phoneContent.label);
+            setIsEditingLabel(false);
+          }
+        };
+        return (
+          <div className="space-y-2" style={elementStyle}>
+            {isEditingLabel ? (
+              <Input
+                value={labelValue}
+                onChange={(e) => setLabelValue(e.target.value)}
+                onBlur={handleLabelBlur}
+                onKeyDown={handleLabelKeyDown}
+                autoFocus
+                className="text-sm font-medium border-primary h-7"
+                onClick={(e) => e.stopPropagation()}
+              />
+            ) : (
+              <Label
+                className="text-sm font-medium text-foreground cursor-text hover:bg-accent/50 px-1 py-0.5 rounded"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleLabelClick();
+                }}
+              >
+                {phoneContent.label}
+                {phoneContent.required && <span className="text-destructive ml-1">*</span>}
+              </Label>
+            )}
+            <Input 
+              type="tel"
+              placeholder={phoneContent.placeholder}
+              className="print:border-0 print:border-b print:border-dotted print:rounded-none"
+            />
+          </div>
+        );
+      }
+
+      case 'ADDRESS': {
+        const addressContent = element.content as AddressContent;
+        const handleLabelClick = () => {
+          setIsEditingLabel(true);
+          setLabelValue(addressContent.label);
+        };
+        const handleLabelBlur = () => {
+          setIsEditingLabel(false);
+          if (labelValue !== addressContent.label) {
+            onUpdate(element.id, { ...addressContent, label: labelValue }, element.styles);
+          }
+        };
+        const handleLabelKeyDown = (e: React.KeyboardEvent) => {
+          if (e.key === 'Enter') {
+            handleLabelBlur();
+          } else if (e.key === 'Escape') {
+            setLabelValue(addressContent.label);
+            setIsEditingLabel(false);
+          }
+        };
+        return (
+          <div className="space-y-2" style={elementStyle}>
+            {isEditingLabel ? (
+              <Input
+                value={labelValue}
+                onChange={(e) => setLabelValue(e.target.value)}
+                onBlur={handleLabelBlur}
+                onKeyDown={handleLabelKeyDown}
+                autoFocus
+                className="text-sm font-medium border-primary h-7"
+                onClick={(e) => e.stopPropagation()}
+              />
+            ) : (
+              <Label
+                className="text-sm font-medium text-foreground cursor-text hover:bg-accent/50 px-1 py-0.5 rounded"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleLabelClick();
+                }}
+              >
+                {addressContent.label}
+                {addressContent.required && <span className="text-destructive ml-1">*</span>}
+              </Label>
+            )}
+            <Textarea 
+              placeholder={addressContent.placeholder}
+              className="resize-none print:border-0 print:border-b print:border-dotted print:rounded-none"
+              rows={3}
+            />
+          </div>
+        );
+      }
+
       case 'TEXTAREA': {
         const textareaContent = element.content as InputContent;
         const handleLabelClick = () => {
@@ -526,6 +704,250 @@ export const ElementRenderer = ({ element, onDelete, onUpdate, onDropInContainer
                 ))}
               </SelectDropdown>
             </Select>
+          </div>
+        );
+      }
+
+      case 'NIGERIA_STATE': {
+        const stateContent = element.content as NigeriaStateContent;
+        const handleLabelClick = () => {
+          setIsEditingLabel(true);
+          setLabelValue(stateContent.label);
+        };
+        const handleLabelBlur = () => {
+          setIsEditingLabel(false);
+          if (labelValue !== stateContent.label) {
+            onUpdate(element.id, { ...stateContent, label: labelValue }, element.styles);
+          }
+        };
+        const handleLabelKeyDown = (e: React.KeyboardEvent) => {
+          if (e.key === 'Enter') {
+            handleLabelBlur();
+          } else if (e.key === 'Escape') {
+            setLabelValue(stateContent.label);
+            setIsEditingLabel(false);
+          }
+        };
+        // Use a static list here just for builder preview; user-facing form will use the full dataset
+        const previewStates = ['Lagos', 'Abuja (FCT)', 'Rivers', 'Kano', 'Enugu'];
+        return (
+          <div className="space-y-2" style={elementStyle}>
+            {isEditingLabel ? (
+              <Input
+                value={labelValue}
+                onChange={(e) => setLabelValue(e.target.value)}
+                onBlur={handleLabelBlur}
+                onKeyDown={handleLabelKeyDown}
+                autoFocus
+                className="text-sm font-medium border-primary h-7"
+                onClick={(e) => e.stopPropagation()}
+              />
+            ) : (
+              <Label
+                className="text-sm font-medium text-foreground cursor-text hover:bg-accent/50 px-1 py-0.5 rounded"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleLabelClick();
+                }}
+              >
+                {stateContent.label}
+                {stateContent.required && <span className="text-destructive ml-1">*</span>}
+              </Label>
+            )}
+            <Select>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a state" />
+              </SelectTrigger>
+              <SelectDropdown>
+                {previewStates.map((st) => (
+                  <SelectItem key={st} value={st}>
+                    {st}
+                  </SelectItem>
+                ))}
+              </SelectDropdown>
+            </Select>
+          </div>
+        );
+      }
+
+      case 'NIGERIA_CITY': {
+        const cityContent = element.content as NigeriaCityContent;
+        const handleLabelClick = () => {
+          setIsEditingLabel(true);
+          setLabelValue(cityContent.label);
+        };
+        const handleLabelBlur = () => {
+          setIsEditingLabel(false);
+          if (labelValue !== cityContent.label) {
+            onUpdate(element.id, { ...cityContent, label: labelValue }, element.styles);
+          }
+        };
+        const handleLabelKeyDown = (e: React.KeyboardEvent) => {
+          if (e.key === 'Enter') {
+            handleLabelBlur();
+          } else if (e.key === 'Escape') {
+            setLabelValue(cityContent.label);
+            setIsEditingLabel(false);
+          }
+        };
+        // Just a sample list for builder preview; real options depend on state in user form
+        const previewCities = ['Ikeja', 'Victoria Island', 'Lekki', 'Port Harcourt', 'Kano City'];
+        return (
+          <div className="space-y-2" style={elementStyle}>
+            {isEditingLabel ? (
+              <Input
+                value={labelValue}
+                onChange={(e) => setLabelValue(e.target.value)}
+                onBlur={handleLabelBlur}
+                onKeyDown={handleLabelKeyDown}
+                autoFocus
+                className="text-sm font-medium border-primary h-7"
+                onClick={(e) => e.stopPropagation()}
+              />
+            ) : (
+              <Label
+                className="text-sm font-medium text-foreground cursor-text hover:bg-accent/50 px-1 py-0.5 rounded"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleLabelClick();
+                }}
+              >
+                {cityContent.label}
+                {cityContent.required && <span className="text-destructive ml-1">*</span>}
+              </Label>
+            )}
+            <Select>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a city (based on state)" />
+              </SelectTrigger>
+              <SelectDropdown>
+                {previewCities.map((ct) => (
+                  <SelectItem key={ct} value={ct}>
+                    {ct}
+                  </SelectItem>
+                ))}
+              </SelectDropdown>
+            </Select>
+          </div>
+        );
+      }
+
+      case 'COUNTRY': {
+        const countryContent = element.content as CountryContent;
+        const handleLabelClick = () => {
+          setIsEditingLabel(true);
+          setLabelValue(countryContent.label);
+        };
+        const handleLabelBlur = () => {
+          setIsEditingLabel(false);
+          if (labelValue !== countryContent.label) {
+            onUpdate(element.id, { ...countryContent, label: labelValue }, element.styles);
+          }
+        };
+        const handleLabelKeyDown = (e: React.KeyboardEvent) => {
+          if (e.key === 'Enter') {
+            handleLabelBlur();
+          } else if (e.key === 'Escape') {
+            setLabelValue(countryContent.label);
+            setIsEditingLabel(false);
+          }
+        };
+        const options = countryContent.options && countryContent.options.length > 0
+          ? countryContent.options
+          : ['Nigeria'];
+        return (
+          <div className="space-y-2" style={elementStyle}>
+            {isEditingLabel ? (
+              <Input
+                value={labelValue}
+                onChange={(e) => setLabelValue(e.target.value)}
+                onBlur={handleLabelBlur}
+                onKeyDown={handleLabelKeyDown}
+                autoFocus
+                className="text-sm font-medium border-primary h-7"
+                onClick={(e) => e.stopPropagation()}
+              />
+            ) : (
+              <Label
+                className="text-sm font-medium text-foreground cursor-text hover:bg-accent/50 px-1 py-0.5 rounded"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleLabelClick();
+                }}
+              >
+                {countryContent.label}
+                {countryContent.required && <span className="text-destructive ml-1">*</span>}
+              </Label>
+            )}
+            <Select>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a country" />
+              </SelectTrigger>
+              <SelectDropdown>
+                {options.map((ct) => (
+                  <SelectItem key={ct} value={ct}>
+                    {ct}
+                  </SelectItem>
+                ))}
+              </SelectDropdown>
+            </Select>
+          </div>
+        );
+      }
+
+      case 'NAME': {
+        const nameContent = element.content as NameContent;
+        return (
+          <div className="space-y-3" style={elementStyle}>
+            <Label className="text-sm font-medium text-foreground">
+              {nameContent.label}
+            </Label>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">
+                  {nameContent.firstNameLabel}
+                  {nameContent.firstRequired && <span className="text-destructive ml-1">*</span>}
+                </Label>
+                <Input placeholder={nameContent.firstNameLabel} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">
+                  {nameContent.middleNameLabel}
+                </Label>
+                <Input placeholder={nameContent.middleNameLabel} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">
+                  {nameContent.lastNameLabel}
+                  {nameContent.lastRequired && <span className="text-destructive ml-1">*</span>}
+                </Label>
+                <Input placeholder={nameContent.lastNameLabel} />
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      case 'PASSPORT_IMAGE': {
+        const passportContent = element.content as PassportImageContent;
+        return (
+          <div className="space-y-2" style={elementStyle}>
+            <Label className="text-sm font-medium text-foreground">
+              {passportContent.label}
+              {passportContent.required && <span className="text-destructive ml-1">*</span>}
+            </Label>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+              <Button 
+                type="button" 
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                Upload Passport
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                JPEG/PNG, max 2MB. Standard passport-style photograph.
+              </p>
+            </div>
           </div>
         );
       }

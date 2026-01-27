@@ -291,10 +291,16 @@ export const FormBuilder = ({ pageId, initialElements }: FormBuilderProps) => {
     toast.success(`${config.label} added to ${targetName}`);
   }, []);
 
-  // Save draft - auto-saves as template to Pages
-  const handleSave = useCallback(() => {
+  // Save template to Pages (with name)
+  const handleSave = useCallback((templateName: string) => {
     if (elements.length === 0) {
       toast.error('Please add at least one element to save a template');
+      return;
+    }
+
+    const trimmedName = templateName.trim();
+    if (!trimmedName) {
+      toast.error('Please enter a template name');
       return;
     }
     
@@ -304,7 +310,7 @@ export const FormBuilder = ({ pageId, initialElements }: FormBuilderProps) => {
     
     // Save template using mutation hook (which will invalidate queries)
     saveTemplate.mutate(
-      { elements, userId },
+      { elements, userId, title: trimmedName },
       {
         onSuccess: () => {
           // Also store in localStorage for draft recovery

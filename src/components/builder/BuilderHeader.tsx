@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -28,7 +29,7 @@ interface BuilderHeaderProps {
   elementCount: number;
   elements: any[];
   pageId?: string;
-  onSave: () => void;
+  onSave: (templateName: string) => void;
   onPrint: () => void;
   onClear: () => void;
   isSaving?: boolean;
@@ -46,6 +47,8 @@ export const BuilderHeader = ({
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [templateName, setTemplateName] = useState('');
 
   const handleClearConfirm = () => {
     onClear();
@@ -56,6 +59,20 @@ export const BuilderHeader = ({
     logout();
     toast.success('Logged out successfully');
     navigate('/login');
+  };
+
+  const handleSaveClick = () => {
+    if (elementCount === 0 || isSaving) return;
+    setSaveDialogOpen(true);
+  };
+
+  const handleSaveConfirm = () => {
+    const trimmedName = templateName.trim();
+    if (!trimmedName) {
+      return;
+    }
+    onSave(trimmedName);
+    setSaveDialogOpen(false);
   };
 
   const handlePreview = () => {
@@ -95,7 +112,7 @@ export const BuilderHeader = ({
                 {pageId ? 'Edit Template' : 'Template Builder'}
               </h1>
               <p className="text-sm text-muted-foreground">
-                {elementCount} element{elementCount !== 1 ? 's' : ''} • Save to create template
+                {elementCount} element{elementCount !== 1 ? 's' : ''} • Save to create a reusable template
               </p>
             </div>
           </div>
@@ -125,12 +142,12 @@ export const BuilderHeader = ({
             <Button
               variant="outline"
               size="sm"
-              onClick={onSave}
-              disabled={isSaving}
+              onClick={handleSaveClick}
+              disabled={isSaving || elementCount === 0}
               className="flex-1 sm:flex-initial"
             >
               <MdSave className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline">{isSaving ? 'Saving...' : 'Save Draft'}</span>
+              <span className="hidden sm:inline">{isSaving ? 'Saving...' : 'Save Template'}</span>
             </Button>
             <Button
               variant="outline"
@@ -200,6 +217,45 @@ export const BuilderHeader = ({
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
             Clear All
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    {/* Save Template Dialog */}
+    <AlertDialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Save Template</AlertDialogTitle>
+          <AlertDialogDescription>
+            Give this template a clear name so you can easily find and reuse it when creating forms.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <div className="space-y-2 py-2">
+          <label className="text-sm font-medium text-foreground" htmlFor="template-name-input">
+            Template Name
+          </label>
+          <Input
+            id="template-name-input"
+            placeholder="e.g. Personal Information Section"
+            value={templateName}
+            onChange={(e) => setTemplateName(e.target.value)}
+            autoFocus
+          />
+        </div>
+        <AlertDialogFooter>
+          <AlertDialogCancel
+            onClick={() => {
+              setTemplateName('');
+            }}
+          >
+            Cancel
+          </AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleSaveConfirm}
+            disabled={isSaving || !templateName.trim()}
+          >
+            {isSaving ? 'Saving...' : 'Save Template'}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

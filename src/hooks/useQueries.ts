@@ -103,8 +103,8 @@ export const useSaveTemplate = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ elements, userId }: { elements: FormElement[]; userId?: string }) => 
-      pagesApi.saveTemplate(elements, userId),
+    mutationFn: ({ elements, userId, title }: { elements: FormElement[]; userId?: string; title: string }) => 
+      pagesApi.saveTemplate(elements, userId, title),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.pages.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.stats });
@@ -119,7 +119,7 @@ export const useLinkTemplates = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ templateIds, pageData }: { templateIds: string[]; pageData: { title: string; slug: string; description?: string; status?: 'published' | 'draft' } }) =>
+    mutationFn: ({ templateIds, pageData }: { templateIds: string[]; pageData: { title: string; slug: string; description?: string; category?: string; status?: 'published' | 'draft' } }) =>
       pagesApi.linkTemplates(templateIds, pageData),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.pages.all });

@@ -17,7 +17,27 @@ import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent as SelectDropdown, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import type { InputContent, SelectContent, RadioContent, CheckboxContent, FormElement, ElementContent, ImageContent, ButtonContent, GridContent, ContainerContent, SpaceContent } from '@/types/builder';
+import type { 
+  InputContent, 
+  SelectContent, 
+  RadioContent, 
+  CheckboxContent, 
+  FormElement, 
+  ElementContent, 
+  ImageContent, 
+  ButtonContent, 
+  GridContent, 
+  ContainerContent, 
+  SpaceContent,
+  NameContent,
+  AddressContent,
+  PhoneContent,
+  NumberContent,
+  NigeriaStateContent,
+  NigeriaCityContent,
+  CountryContent,
+  PassportImageContent,
+} from '@/types/builder';
 
 interface EditFormModalProps {
   open: boolean;
@@ -104,6 +124,65 @@ export const EditFormModal = ({ open, onOpenChange, elementType, content, elemen
         );
       }
 
+      case 'NUMBER': {
+        const data = formData as NumberContent;
+        return (
+          <>
+            <div className="space-y-2">
+              <Label>Field Label</Label>
+              <Input
+                value={data.label}
+                onChange={(e) => setFormData({ ...data, label: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Placeholder</Label>
+              <Input
+                value={data.placeholder}
+                onChange={(e) => setFormData({ ...data, placeholder: e.target.value })}
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                checked={data.required || false}
+                onCheckedChange={(checked) => setFormData({ ...data, required: checked })}
+              />
+              <Label>Required Field</Label>
+            </div>
+          </>
+        );
+      }
+
+      case 'PHONE':
+      case 'ADDRESS': {
+        const data = formData as PhoneContent | AddressContent;
+        return (
+          <>
+            <div className="space-y-2">
+              <Label>Field Label</Label>
+              <Input
+                value={data.label}
+                onChange={(e) => setFormData({ ...data, label: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Placeholder</Label>
+              <Input
+                value={data.placeholder}
+                onChange={(e) => setFormData({ ...data, placeholder: e.target.value })}
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                checked={data.required || false}
+                onCheckedChange={(checked) => setFormData({ ...data, required: checked })}
+              />
+              <Label>Required Field</Label>
+            </div>
+          </>
+        );
+      }
+
       case 'CHECKBOX': {
         const data = formData as CheckboxContent;
         return (
@@ -145,6 +224,170 @@ export const EditFormModal = ({ open, onOpenChange, elementType, content, elemen
               <Label>Required Field</Label>
             </div>
           </>
+        );
+      }
+
+      case 'NIGERIA_STATE': {
+        const data = formData as NigeriaStateContent;
+        return (
+          <>
+            <div className="space-y-2">
+              <Label>Field Label</Label>
+              <Input
+                value={data.label}
+                onChange={(e) => setFormData({ ...data, label: e.target.value })}
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                checked={data.required || false}
+                onCheckedChange={(checked) => setFormData({ ...data, required: checked })}
+              />
+              <Label>Required Field</Label>
+            </div>
+          </>
+        );
+      }
+
+      case 'NIGERIA_CITY': {
+        const data = formData as NigeriaCityContent;
+        return (
+          <>
+            <div className="space-y-2">
+              <Label>Field Label</Label>
+              <Input
+                value={data.label}
+                onChange={(e) => setFormData({ ...data, label: e.target.value })}
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                checked={data.required || false}
+                onCheckedChange={(checked) => setFormData({ ...data, required: checked })}
+              />
+              <Label>Required Field</Label>
+            </div>
+          </>
+        );
+      }
+
+      case 'COUNTRY': {
+        const data = formData as CountryContent;
+        return (
+          <>
+            <div className="space-y-2">
+              <Label>Field Label</Label>
+              <Input
+                value={data.label}
+                onChange={(e) => setFormData({ ...data, label: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Options (one per line)</Label>
+              <Textarea
+                value={(data.options || ['Nigeria']).join('\n')}
+                onChange={(e) =>
+                  setFormData({
+                    ...data,
+                    options: e.target.value.split('\n').filter((o) => o.trim()),
+                  })
+                }
+                rows={4}
+              />
+              <p className="text-xs text-muted-foreground">
+                Default is Nigeria. Add more countries if you want this form to support other locations.
+              </p>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                checked={data.required || false}
+                onCheckedChange={(checked) => setFormData({ ...data, required: checked })}
+              />
+              <Label>Required Field</Label>
+            </div>
+          </>
+        );
+      }
+
+      case 'NAME': {
+        const data = formData as NameContent;
+        return (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Group Label</Label>
+              <Input
+                value={data.label}
+                onChange={(e) => setFormData({ ...data, label: e.target.value })}
+                placeholder="Full Name"
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>First Name Label</Label>
+                <Input
+                  value={data.firstNameLabel}
+                  onChange={(e) => setFormData({ ...data, firstNameLabel: e.target.value })}
+                  placeholder="First Name"
+                />
+                <div className="flex items-center space-x-2 mt-1">
+                  <Switch
+                    checked={data.firstRequired ?? true}
+                    onCheckedChange={(checked) => setFormData({ ...data, firstRequired: checked })}
+                  />
+                  <Label>Required</Label>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Middle Name Label</Label>
+                <Input
+                  value={data.middleNameLabel}
+                  onChange={(e) => setFormData({ ...data, middleNameLabel: e.target.value })}
+                  placeholder="Middle Name (Optional)"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Last Name Label</Label>
+                <Input
+                  value={data.lastNameLabel}
+                  onChange={(e) => setFormData({ ...data, lastNameLabel: e.target.value })}
+                  placeholder="Last Name"
+                />
+                <div className="flex items-center space-x-2 mt-1">
+                  <Switch
+                    checked={data.lastRequired ?? true}
+                    onCheckedChange={(checked) => setFormData({ ...data, lastRequired: checked })}
+                  />
+                  <Label>Required</Label>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      case 'PASSPORT_IMAGE': {
+        const data = formData as PassportImageContent;
+        return (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Field Label</Label>
+              <Input
+                value={data.label}
+                onChange={(e) => setFormData({ ...data, label: e.target.value })}
+                placeholder="Passport Photograph"
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                checked={data.required || false}
+                onCheckedChange={(checked) => setFormData({ ...data, required: checked })}
+              />
+              <Label>Required Field</Label>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              The actual upload happens when users fill the application form. Here you control the label and whether it is required.
+            </p>
+          </div>
         );
       }
 

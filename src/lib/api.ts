@@ -47,6 +47,7 @@ export interface Page {
   isNamed?: boolean; // true if template has been given a name
   templateIds?: string[]; // Array of template IDs linked together to form a page
   description?: string;
+  category?: string; // Category for organizing forms (e.g., 'Land Allocation', 'Registration', 'Application')
 }
 
 import type { UserRole, Permission } from '@/types/auth';
@@ -225,6 +226,7 @@ export const pagesApi = {
       isNamed: data.isNamed ?? (!!data.title),
       templateIds: data.templateIds,
       description: data.description,
+      category: data.category,
     };
     
     // Save to localStorage
@@ -237,13 +239,18 @@ export const pagesApi = {
   },
 
   // Save a template (auto-saved from builder)
-  saveTemplate: async (elements: FormElement[], userId?: string): Promise<Page> => {
+  saveTemplate: async (elements: FormElement[], userId?: string, title?: string): Promise<Page> => {
     await delay(500);
     const templateId = crypto.randomUUID();
+    const templateTitle = title && title.trim().length > 0 ? title.trim() : 'Unnamed Template';
+    const slugBase = templateTitle
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
     const newTemplate: Page = {
       id: templateId,
-      title: 'Unnamed Template',
-      slug: `/template-${templateId.substring(0, 8)}`,
+      title: templateTitle,
+      slug: `/${slugBase || `template-${templateId.substring(0, 8)}`}`,
       status: 'draft',
       updatedAt: 'Just now',
       views: 0,
@@ -263,7 +270,7 @@ export const pagesApi = {
   },
 
   // Link templates together and name the page
-  linkTemplates: async (templateIds: string[], pageData: { title: string; slug: string; description?: string; status?: 'published' | 'draft' }): Promise<Page> => {
+  linkTemplates: async (templateIds: string[], pageData: { title: string; slug: string; description?: string; status?: 'published' | 'draft'; category?: string }): Promise<Page> => {
     await delay(800);
     
     // Get all templates
@@ -298,6 +305,7 @@ export const pagesApi = {
       isNamed: true,
       templateIds, // Preserve order
       description: pageData.description,
+      category: pageData.category,
       publishedAt: pageData.status === 'published' ? new Date().toISOString() : undefined,
     };
     

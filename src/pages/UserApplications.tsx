@@ -3,59 +3,57 @@ import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MdSearch, MdDescription, MdVisibility, MdAdd } from 'react-icons/md';
-import { usePublishedPages, useUserApplications } from '@/hooks/useQueries';
+import { MdAdd } from 'react-icons/md';
+import { usePublishedPages } from '@/hooks/useQueries';
 import { useAuth } from '@/contexts/AuthContext';
-import type { Application } from '@/types/application';
 
 export default function UserApplications() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { data: publishedPages, isLoading } = usePublishedPages();
-  const { data: userApplications } = useUserApplications(user?.id || '');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedSort, setSelectedSort] = useState<string>('name');
+
+  // Get unique categories from pages
+  const categories = useMemo(() => {
+    if (!publishedPages) return [];
+    const cats = new Set<string>();
+    publishedPages.forEach(page => {
+      if (page.category) cats.add(page.category);
+    });
+    return Array.from(cats).sort();
+  }, [publishedPages]);
 
   const filteredPages = useMemo(() => {
     if (!publishedPages) return [];
-    return publishedPages.filter(page =>
-      page.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      page.slug.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [publishedPages, searchQuery]);
+    let filtered = [...publishedPages];
 
-  // Get all applications for a page (users can apply multiple times)
-  const getPageApplications = (pageId: string): Application[] => {
-    if (!userApplications) return [];
-    return userApplications.filter(app => app.pageId === pageId);
-  };
+    // Filter by category
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(page => page.category === selectedCategory);
+    }
 
-  // Get the latest application status for display
-  const getLatestApplicationStatus = (pageId: string): string | null => {
-    const applications = getPageApplications(pageId);
-    if (applications.length === 0) return null;
-    // Sort by createdAt descending and get the latest
-    const sorted = [...applications].sort((a, b) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-    return sorted[0]?.status || null;
-  };
+    // Sort
+    if (selectedSort === 'name') {
+      filtered.sort((a, b) => a.title.localeCompare(b.title));
+    } else if (selectedSort === 'recent') {
+      filtered.sort((a, b) => b.views - a.views);
+    } else if (selectedSort === 'category') {
+      filtered.sort((a, b) => {
+        const catA = a.category || 'zzz';
+        const catB = b.category || 'zzz';
+        return catA.localeCompare(catB);
+      });
+    }
+
+    return filtered;
+  }, [publishedPages, selectedCategory, selectedSort]);
 
   const handleStartApplication = (pageId: string) => {
     navigate(`/dashboard/applications/${pageId}`);
-  };
-
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-      draft: 'secondary',
-      submitted: 'default',
-      under_review: 'default',
-      approved: 'default',
-      rejected: 'destructive',
-    };
-    return variants[status] || 'secondary';
   };
 
   return (
@@ -70,121 +68,114 @@ export default function UserApplications() {
         <div className="animate-fade-in">
           <h1 className="text-3xl font-bold text-foreground mb-2">Applications</h1>
           <p className="text-muted-foreground">
-            Browse and submit available application forms
+            Select a form to start a new application
           </p>
         </div>
 
-        {/* Search */}
+        {/* Dropdowns Only */}
         <Card className="animate-fade-in" style={{ animationDelay: '100ms' }}>
-          <CardContent className="pt-6">
-            <div className="relative">
-              <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search applications..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
+          <CardContent className="pt-6 space-y-6">
+            {isLoading ? (
+              <div className="space-y-4">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            ) : (
+              <>
+                {/* Category Filter Dropdown */}
+                {categories.length > 0 && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">Filter by Category</label>
+                    <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All Categories" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Categories</SelectItem>
+                        {categories.map((cat) => (
+                          <SelectItem key={cat} value={cat}>
+                            {cat}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {/* Sort Dropdown */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Sort By</label>
+                  <Select value={selectedSort} onValueChange={setSelectedSort}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sort" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="name">Name (A-Z)</SelectItem>
+                      <SelectItem value="recent">Most Popular</SelectItem>
+                      <SelectItem value="category">Category</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Main Application Form Selector */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Select Form to Start Application</label>
+                  <Select
+                    onValueChange={(pageId) => handleStartApplication(pageId)}
+                    disabled={!publishedPages || publishedPages.length === 0}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder={filteredPages.length === 0 ? "No forms available" : "Choose a form to start..."} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filteredPages.length === 0 ? (
+                        <SelectItem value="" disabled>
+                          {selectedCategory !== 'all' ? 'No forms in this category' : 'No forms available'}
+                        </SelectItem>
+                      ) : (
+                        filteredPages.map((page) => (
+                          <SelectItem key={page.id} value={page.id}>
+                            <div className="flex items-center gap-2">
+                              <span>{page.title}</span>
+                              {page.category && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {page.category}
+                                </Badge>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                  {filteredPages.length > 0 && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {filteredPages.length} form{filteredPages.length !== 1 ? 's' : ''} available
+                    </p>
+                  )}
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
-        {/* Applications List */}
-        {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Card key={i}>
-                <CardHeader>
-                  <Skeleton className="h-6 w-3/4" />
-                  <Skeleton className="h-4 w-1/2 mt-2" />
-                </CardHeader>
-                <CardContent>
-                  <Skeleton className="h-20 w-full" />
-                  <Skeleton className="h-10 w-full mt-4" />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : filteredPages.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <MdDescription className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">
-                {searchQuery ? 'No applications found matching your search.' : 'No applications available yet.'}
-              </p>
+        {/* Helper Message */}
+        {!isLoading && publishedPages && publishedPages.length > 0 && (
+          <Card className="border-dashed">
+            <CardContent className="pt-6">
+              <div className="text-center py-4">
+                <p className="text-sm text-muted-foreground">
+                  Use the dropdown above to select a form and start your application.
+                </p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  View all your submitted applications from <span className="font-medium">My Applications</span> in the sidebar.
+                </p>
+              </div>
             </CardContent>
           </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredPages.map((page, index) => {
-              const applications = getPageApplications(page.id);
-              const latestStatus = getLatestApplicationStatus(page.id);
-              const applicationCount = applications.length;
-              return (
-                <Card
-                  key={page.id}
-                  className="animate-fade-in hover:shadow-widget-hover transition-shadow duration-200"
-                  style={{ animationDelay: `${index * 50}ms` }}
-                >
-                  <CardHeader>
-                    <div className="flex items-start justify-between gap-2">
-                      <CardTitle className="text-xl">{page.title}</CardTitle>
-                      {status && (
-                        <Badge variant={getStatusBadge(status)}>
-                          {status.replace('_', ' ')}
-                        </Badge>
-                      )}
-                    </div>
-                    <CardDescription className="font-mono text-xs">
-                      {page.slug}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="text-sm text-muted-foreground">
-                        {page.views} views
-                        {applicationCount > 0 && (
-                          <span className="ml-2">
-                            • {applicationCount} application{applicationCount !== 1 ? 's' : ''}
-                          </span>
-                        )}
-                      </div>
-                      {latestStatus && (
-                        <div className="text-sm">
-                          <Badge variant={getStatusBadge(latestStatus)}>
-                            Latest: {latestStatus === 'draft' ? 'Draft' : latestStatus === 'submitted' ? 'Submitted' : latestStatus === 'under_review' ? 'Under Review' : latestStatus === 'approved' ? 'Approved' : 'Rejected'}
-                          </Badge>
-                        </div>
-                      )}
-                      <div className="flex gap-2">
-                        <Button
-                          variant="default"
-                          className="flex-1"
-                          onClick={() => handleStartApplication(page.id)}
-                        >
-                          <MdAdd className="w-4 h-4 mr-2" />
-                          {applicationCount > 0 ? 'New Application' : 'Start Application'}
-                        </Button>
-                        {applicationCount > 0 && (
-                          <Button
-                            variant="outline"
-                            onClick={() => navigate('/dashboard/my-applications')}
-                          >
-                            <MdVisibility className="w-4 h-4 mr-2" />
-                            View All
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
         )}
       </div>
     </>
   );
 }
-

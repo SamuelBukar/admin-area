@@ -13,7 +13,16 @@ export type WidgetType =
   | 'CONTAINER'
   | 'SPACE'
   | 'IMAGE'
-  | 'BUTTON';
+  | 'BUTTON'
+  // Advanced input widgets
+  | 'NAME'
+  | 'ADDRESS'
+  | 'PHONE'
+  | 'NUMBER'
+  | 'NIGERIA_STATE'
+  | 'NIGERIA_CITY'
+  | 'COUNTRY'
+  | 'PASSPORT_IMAGE';
 
 export interface InputContent {
   label: string;
@@ -60,6 +69,54 @@ export interface ImageContent {
   alignment?: 'left' | 'center' | 'right';
 }
 
+export interface NameContent {
+  label: string;
+  firstNameLabel: string;
+  middleNameLabel: string;
+  lastNameLabel: string;
+  firstRequired?: boolean;
+  lastRequired?: boolean;
+}
+
+export interface AddressContent {
+  label: string;
+  placeholder: string;
+  required?: boolean;
+}
+
+export interface PhoneContent {
+  label: string;
+  placeholder: string;
+  required?: boolean;
+}
+
+export interface NumberContent {
+  label: string;
+  placeholder: string;
+  required?: boolean;
+}
+
+export interface NigeriaStateContent {
+  label: string;
+  required?: boolean;
+}
+
+export interface NigeriaCityContent {
+  label: string;
+  required?: boolean;
+}
+
+export interface CountryContent {
+  label: string;
+  required?: boolean;
+  options?: string[];
+}
+
+export interface PassportImageContent {
+  label: string;
+  required?: boolean;
+}
+
 export interface ButtonContent {
   label: string;
   actionType: 'link' | 'api';
@@ -80,7 +137,15 @@ export type ElementContent =
   | ContainerContent
   | SpaceContent
   | ImageContent
-  | ButtonContent;
+  | ButtonContent
+  | NameContent
+  | AddressContent
+  | PhoneContent
+  | NumberContent
+  | NigeriaStateContent
+  | NigeriaCityContent
+  | CountryContent
+  | PassportImageContent;
 
 export interface FormElement {
   id: string;
