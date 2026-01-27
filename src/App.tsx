@@ -11,6 +11,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { RoleProtectedRoute } from "@/components/RoleProtectedRoute";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 // Lazy load page components for code splitting
 const Login = lazy(() => import("./pages/Login"));
@@ -113,7 +114,9 @@ const App = () => (
                 element={
                   <RoleProtectedRoute allowedRoles={['admin']}>
                     <DashboardLayout>
-                      <CreateForm />
+                      <ErrorBoundary>
+                        <CreateForm />
+                      </ErrorBoundary>
                     </DashboardLayout>
                   </RoleProtectedRoute>
                 }

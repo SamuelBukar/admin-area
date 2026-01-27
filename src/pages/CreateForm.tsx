@@ -27,11 +27,23 @@ import {
 import { toast } from 'sonner';
 
 export default function CreateForm() {
+  console.log('[CreateForm] Component rendering...');
+  
+  // All hooks must be called unconditionally at the top level
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  
+  console.log('[CreateForm] Hooks initialized, getting auth...');
   const { hasPermission, user } = useAuth();
+  console.log('[CreateForm] User:', user ? { id: user.id, role: user.role } : 'null');
+  
+  console.log('[CreateForm] Getting pages...');
   const { data: pages, isLoading: pagesLoading, refetch: refetchPages } = usePages();
+  console.log('[CreateForm] Pages:', pages ? `${pages.length} pages` : 'null', 'Loading:', pagesLoading);
+  
+  console.log('[CreateForm] Getting link templates hook...');
   const linkTemplates = useLinkTemplates();
+  console.log('[CreateForm] Link templates hook initialized');
   
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [title, setTitle] = useState('');
@@ -53,46 +65,60 @@ export default function CreateForm() {
 
   // Get only templates (not named pages)
   const templates = useMemo(() => {
-    if (!pages) return [];
-    return pages.filter(p => p.isTemplate === true && p.isNamed === false);
+    if (!pages) {
+      console.log('[CreateForm] No pages, returning empty templates');
+      return [];
+    }
+    const filtered = pages.filter(p => p.isTemplate === true && p.isNamed === false);
+    console.log('[CreateForm] Templates filtered:', filtered.length);
+    return filtered;
   }, [pages]);
   
-  const canCreate = hasPermission('pages', 'create');
-
-  // Safety check - must be after hooks
-  if (!user) {
-    return (
-      <div className="p-6 lg:p-8 flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
-  }
+  // Check permission safely
+  const canCreate = useMemo(() => {
+    if (!user || !hasPermission) {
+      console.log('[CreateForm] No user or hasPermission, returning false');
+      return false;
+    }
+    try {
+      const result = hasPermission('pages', 'create');
+      console.log('[CreateForm] Permission check result:', result);
+      return result;
+    } catch (error) {
+      console.error('[CreateForm] Permission check error:', error);
+      return false;
+    }
+  }, [user, hasPermission]);
 
   // Refetch pages when component mounts
   useEffect(() => {
+    console.log('[CreateForm] Refetching pages on mount');
     refetchPages();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [refetchPages]);
 
   // Pre-select template from query parameter
   useEffect(() => {
     const templateId = searchParams.get('template');
+    console.log('[CreateForm] Template ID from query:', templateId);
     if (templateId && templates.length > 0) {
       const templateExists = templates.some(t => t.id === templateId);
+      console.log('[CreateForm] Template exists:', templateExists);
       if (templateExists && !selectedIds.includes(templateId)) {
+        console.log('[CreateForm] Pre-selecting template:', templateId);
         setSelectedIds([templateId]);
       }
     }
-  }, [searchParams, templates.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [searchParams, templates, selectedIds]);
 
   // Redirect if no permission
   useEffect(() => {
-    if (canCreate === false) {
+    console.log('[CreateForm] Checking permission for redirect, canCreate:', canCreate, 'user:', !!user);
+    if (canCreate === false && user) {
+      console.log('[CreateForm] No permission, redirecting...');
       toast.error('You don\'t have permission to create forms');
       navigate('/dashboard/pages');
     }
-  }, [canCreate, navigate]);
+  }, [canCreate, navigate, user]);
 
   const handleTitleChange = (value: string) => {
     setTitle(value);
@@ -160,7 +186,7 @@ export default function CreateForm() {
           title: title.trim(), 
           slug: slug.trim(), 
           description: description.trim() || undefined, 
-          category: category.trim() || undefined, 
+          category: (category && category !== '__none__' && category.trim()) ? category.trim() : undefined, 
           status: saveStatus 
         },
       });
@@ -168,12 +194,28 @@ export default function CreateForm() {
       navigate('/dashboard/pages');
     } catch (error) {
       console.error('Failed to save form:', error);
-      // Error toast is handled by the hook
+      toast.error('Failed to save form. Please try again.');
     }
   };
 
-  // Show loading or redirect if no permission
+  console.log('[CreateForm] Render check - user:', !!user, 'canCreate:', canCreate);
+
+  // Show loading if user is not loaded yet
+  if (!user) {
+    console.log('[CreateForm] Rendering loading state (no user)');
+    return (
+      <div className="p-6 lg:p-8 flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Skeleton className="h-8 w-48 mx-auto mb-4" />
+          <Skeleton className="h-4 w-64 mx-auto" />
+        </div>
+      </div>
+    );
+  }
+
+  // Show redirect message if no permission
   if (canCreate === false) {
+    console.log('[CreateForm] Rendering redirect state (no permission)');
     return (
       <div className="p-6 lg:p-8 flex items-center justify-center min-h-[400px]">
         <div className="text-center">
@@ -183,6 +225,9 @@ export default function CreateForm() {
     );
   }
 
+  console.log('[CreateForm] Rendering main content');
+  
+  // Main render
   return (
     <>
       <Helmet>
@@ -280,12 +325,12 @@ export default function CreateForm() {
 
             <div className="space-y-2">
               <Label htmlFor="category">Category (Optional)</Label>
-              <Select value={category} onValueChange={setCategory}>
+              <Select value={category || undefined} onValueChange={(value) => setCategory(value === '__none__' ? '' : value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select a category" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="__none__">None</SelectItem>
                   {formCategories.map((cat) => (
                     <SelectItem key={cat} value={cat}>
                       {cat}
