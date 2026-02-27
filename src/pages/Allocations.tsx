@@ -63,14 +63,14 @@ export default function Allocations() {
   const filteredAndSortedAllocations = useMemo(() => {
     let filtered = allocations.filter((allocation) => {
       const matchesSearch = 
-        allocation.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        allocation.parcelNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (isAdmin && allocation.userId.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (allocation.location || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (allocation.parcelNumber || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (isAdmin && (allocation.userId || '').toLowerCase().includes(searchQuery.toLowerCase())) ||
         (isAdmin && (() => {
           const applicantInfo = getApplicantInfo(allocation);
           return applicantInfo ? 
-            applicantInfo.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            applicantInfo.email.toLowerCase().includes(searchQuery.toLowerCase())
+            (applicantInfo.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (applicantInfo.email || '').toLowerCase().includes(searchQuery.toLowerCase())
             : false;
         })());
       

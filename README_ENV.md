@@ -48,9 +48,6 @@ const apiUrl = env.apiUrl;
 
 // Get full URL for an endpoint
 const fullUrl = getApiUrl('/users');
-
-// Check if using mock data
-const useMock = shouldUseMockData();
 ```
 
 ## API Client
@@ -87,6 +84,6 @@ When deploying to production:
 
 ## Development vs Production
 
-- **Development / Production:** Always configure `VITE_API_URL` to point at your backend (e.g. `https://admin-area-be.onrender.com/api`). The project no longer falls back to mock data; leaving the variable empty will result in errors.
+- **Development / Production:** Always configure `VITE_API_URL` to point at your backend (e.g. `https://admin-area-be.onrender.com/api`). If the variable is missing, API calls will fail.
 
 > **Credentials:** The frontend does not ship with any built‑in demo account. You must login using a user that exists on the backend (or register/create one via an API call). If you receive a 401 Unauthorized error, double‑check that the email/password pair is valid for your hosted API.

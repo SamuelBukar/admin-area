@@ -33,6 +33,33 @@ export const getDefaultPermissionsForRole = (role: UserRole): Permission => {
         settings: { view: true, edit: false },
       };
 
+    case 'editor':
+      // Content editor-style access
+      return {
+        ...basePermissions,
+        pages: { view: true, create: true, edit: true, delete: false, publish: true },
+        templates: { create: true, edit: true, delete: true },
+        settings: { view: true, edit: false },
+        applications: { view: true, submit: true, edit: true },
+      };
+
+    case 'viewer':
+      // Read-only access where applicable
+      return {
+        ...basePermissions,
+        pages: { view: true, create: false, edit: false, delete: false, publish: false },
+        templates: { create: false, edit: false, delete: false },
+        settings: { view: true, edit: false },
+        applications: { view: true, submit: false, edit: false },
+        reports: { view: true, generate: false },
+        payments: { view: true, manage: false },
+        allocations: { view: true, manage: false },
+      };
+
+    case 'land_administrator':
+      // Treat as admin-level access by default (backend can still override via explicit permissions)
+      return getDefaultPermissionsForRole('admin');
+
     default:
       return basePermissions;
   }

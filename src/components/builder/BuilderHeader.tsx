@@ -76,16 +76,14 @@ export const BuilderHeader = ({
   };
 
   const handlePreview = () => {
-    // Store template data temporarily for preview
-    const templateData = {
-      elements,
-      previewId: crypto.randomUUID(),
-    };
-    sessionStorage.setItem('preview-template', JSON.stringify(templateData));
-    
-    // Open preview in new tab
-    const previewUrl = `/dashboard/preview?templateId=${templateData.previewId}`;
-    window.open(previewUrl, '_blank');
+    if (!pageId) {
+      toast.error('Save the template before previewing.');
+      return;
+    }
+
+    // Preview saved template/page from API
+    const previewUrl = `/dashboard/preview?templateId=${pageId}`;
+    window.open(previewUrl, '_blank', 'noopener,noreferrer');
   };
 
 

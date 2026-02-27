@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -17,6 +17,8 @@ import { Separator } from '@/components/ui/separator';
 import { useCreateUser } from '@/hooks/useQueries';
 import type { UserRole, Permission } from '@/types/auth';
 import { getDefaultPermissionsForRole } from '@/lib/permissions';
+import { toast } from 'sonner';
+import { MdContentCopy, MdRefresh } from 'react-icons/md';
 
 interface CreateUserModalProps {
   open: boolean;
@@ -26,10 +28,43 @@ interface CreateUserModalProps {
 export const CreateUserModal = ({ open, onOpenChange }: CreateUserModalProps) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [autoGeneratePassword, setAutoGeneratePassword] = useState(true);
   const [role, setRole] = useState<UserRole>('user');
   const [permissions, setPermissions] = useState<Permission>(getDefaultPermissionsForRole('user'));
   
   const createUser = useCreateUser();
+
+  const generatedPassword = useMemo(() => {
+    const lowercase = 'abcdefghijkmnopqrstuvwxyz';
+    const uppercase = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    const digits = '23456789';
+    const symbols = '!@#$%^&*_-+=';
+
+    const pick = (alphabet: string) => alphabet[Math.floor(Math.random() * alphabet.length)];
+    const required = [pick(lowercase), pick(uppercase), pick(digits), pick(symbols)];
+    const all = lowercase + uppercase + digits + symbols;
+
+    const length = 12;
+    const rest = Array.from({ length: Math.max(0, length - required.length) }, () => pick(all));
+    const raw = [...required, ...rest];
+
+    // Fisher–Yates shuffle
+    for (let i = raw.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [raw[i], raw[j]] = [raw[j], raw[i]];
+    }
+
+    return raw.join('');
+  }, [open]); // new password each open
+
+  useEffect(() => {
+    if (!open) return;
+    if (!autoGeneratePassword) return;
+    if (password.trim()) return;
+    setPassword(generatedPassword);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, autoGeneratePassword, generatedPassword]);
 
   const handleRoleChange = (newRole: UserRole) => {
     setRole(newRole);
@@ -63,12 +98,24 @@ export const CreateUserModal = ({ open, onOpenChange }: CreateUserModalProps) =>
       return;
     }
 
+    const passwordToSend =
+      autoGeneratePassword && !password.trim() ? generatedPassword : password.trim();
+
     createUser.mutate(
-      { name, email, role, status: 'active', permissions },
+      {
+        name,
+        email,
+        role,
+        status: 'active',
+        permissions,
+        ...(passwordToSend ? { password: passwordToSend } : {}),
+      },
       {
         onSuccess: () => {
           setName('');
           setEmail('');
+          setPassword('');
+          setAutoGeneratePassword(true);
           setRole('user');
           setPermissions(getDefaultPermissionsForRole('user'));
           onOpenChange(false);
@@ -111,6 +158,76 @@ export const CreateUserModal = ({ open, onOpenChange }: CreateUserModalProps) =>
                   onChange={(e) => setEmail(e.target.value)}
                   required
                 />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="password">Password (Optional)</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder={autoGeneratePassword ? 'Auto-generated password' : 'Set a password (optional)'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pr-20"
+                  />
+                  <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={async () => {
+                        if (!password.trim()) return;
+                        try {
+                          await navigator.clipboard.writeText(password);
+                          toast.success('Password copied');
+                        } catch {
+                          toast.error('Failed to copy password');
+                        }
+                      }}
+                      disabled={!password.trim()}
+                      aria-label="Copy password"
+                      title="Copy password"
+                    >
+                      <MdContentCopy className="h-4 w-4" />
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={() => {
+                        setAutoGeneratePassword(true);
+                        setPassword(generatedPassword);
+                        toast.success('New password generated');
+                      }}
+                      aria-label="Regenerate password"
+                      title="Regenerate password"
+                    >
+                      <MdRefresh className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="auto-generate-password"
+                    checked={autoGeneratePassword}
+                    onCheckedChange={(checked) => {
+                      const next = checked === true;
+                      setAutoGeneratePassword(next);
+                      if (next && !password.trim()) setPassword(generatedPassword);
+                    }}
+                  />
+                  <Label htmlFor="auto-generate-password" className="text-sm font-normal cursor-pointer">
+                    Auto-generate password
+                  </Label>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  If auto-generate is on, we’ll send a generated password to the backend. Use the copy icon to share it with the user.
+                </p>
               </div>
 
               <div className="grid gap-2">

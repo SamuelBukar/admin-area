@@ -48,7 +48,7 @@ export const CreatePageModal = ({ open, onOpenChange }: CreatePageModalProps) =>
   const handleTitleChange = (value: string) => {
     setTitle(value);
     // Auto-generate slug from title
-    const generatedSlug = '/' + value
+    const generatedSlug = value
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '');
@@ -82,7 +82,7 @@ export const CreatePageModal = ({ open, onOpenChange }: CreatePageModalProps) =>
               <Label htmlFor="slug">URL Slug</Label>
               <Input
                 id="slug"
-                placeholder="/contact-form"
+                placeholder="contact-form"
                 value={slug}
                 onChange={(e) => setSlug(e.target.value)}
                 required

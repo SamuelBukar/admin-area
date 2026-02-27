@@ -16,41 +16,16 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { 
   MdMenu,
   MdDashboard, 
-  MdBuild,
-  MdPages,
-  MdPeople,
   MdSettings, 
   MdLogout,
   MdNotifications,
   MdSearch,
   MdLightMode,
   MdDarkMode,
-  MdPayment,
-  MdAssignment,
-  MdDescription
 } from 'react-icons/md';
 import { useTheme } from 'next-themes';
 import { toast } from 'sonner';
-
-interface NavigationItem {
-  path: string;
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-  adminOnly?: boolean;
-}
-
-const allNavigationItems: NavigationItem[] = [
-  { path: '/dashboard', label: 'Dashboard', icon: MdDashboard },
-  { path: '/dashboard/builder', label: 'Builder', icon: MdBuild, adminOnly: true },
-  { path: '/dashboard/pages', label: 'Pages', icon: MdPages, adminOnly: true },
-  { path: '/dashboard/applications', label: 'Applications', icon: MdPages },
-  { path: '/dashboard/my-applications', label: 'My Applications', icon: MdDescription },
-  { path: '/dashboard/payments', label: 'Payments', icon: MdPayment },
-  { path: '/dashboard/allocations', label: 'Allocations', icon: MdAssignment },
-  { path: '/dashboard/reports', label: 'Reports', icon: MdDescription },
-  { path: '/dashboard/users', label: 'User Management', icon: MdPeople, adminOnly: true },
-  { path: '/dashboard/settings', label: 'Settings', icon: MdSettings },
-];
+import { ALL_NAVIGATION_ITEMS, filterNavigationItems } from '@/config/navigation';
 
 export const Navbar = () => {
   const { user, logout, hasPermission } = useAuth();
@@ -59,32 +34,8 @@ export const Navbar = () => {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
-  // Filter navigation items based on user role and permissions
-  const isAdmin = user?.role === 'admin';
-  const navigationItems = allNavigationItems.filter(item => {
-    if (item.adminOnly && !isAdmin) return false;
-    
-    // For admin users, always show admin-only items (Pages, Builder, Users)
-    if (isAdmin && item.adminOnly) return true;
-    
-    // Check permissions
-    if (item.path === '/dashboard/builder' && !hasPermission('templates', 'create')) return false;
-    if (item.path === '/dashboard/pages' && !hasPermission('pages', 'view')) return false;
-    if (item.path === '/dashboard/users' && !hasPermission('users', 'create')) return false;
-    if (item.path === '/dashboard/settings' && !hasPermission('settings', 'view')) return false;
-    if (item.path === '/dashboard/applications' && !hasPermission('applications', 'view')) return false;
-    if (item.path === '/dashboard/payments' && !hasPermission('payments', 'view')) return false;
-    if (item.path === '/dashboard/allocations' && !hasPermission('allocations', 'view')) return false;
-    if (item.path === '/dashboard/reports' && !hasPermission('reports', 'view')) return false;
-    
-    // For non-admin users, hide "Pages", "Builder", and "Users"
-    if (!isAdmin) {
-      if (item.path === '/dashboard/pages') return false;
-      if (item.path === '/dashboard/builder') return false;
-      if (item.path === '/dashboard/users') return false;
-    }
-    return true;
-  });
+  // Filter navigation items using centralized config
+  const navigationItems = filterNavigationItems(ALL_NAVIGATION_ITEMS, user?.role, hasPermission);
 
   // Prevent hydration mismatch
   useEffect(() => {

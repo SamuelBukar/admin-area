@@ -43,8 +43,8 @@ const UserManagement = () => {
   const filteredUsers = useMemo(() => {
     const list = safeUsers;
     return list.filter(user =>
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase())
+      (user.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (user.email || '').toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [users, searchQuery]);
 
@@ -215,27 +215,27 @@ const UserManagement = () => {
                     <div className="flex items-center gap-4">
                       <Avatar className="w-12 h-12">
                         <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                          {user.name.split(' ').map(n => n[0]).join('')}
+                          {(user.name || '').split(' ').map(n => n[0]).join('')}
                         </AvatarFallback>
                       </Avatar>
                       <div>
                         <div className="flex items-center gap-3 mb-1">
-                          <CardTitle className="text-lg">{user.name}</CardTitle>
+                          <CardTitle className="text-lg">{user.name || '-'}</CardTitle>
                           <Badge variant={getRoleBadgeVariant(user.role)}>
-                            {user.role}
+                            {user.role || 'user'}
                           </Badge>
                           <Badge variant={user.status === 'active' ? 'default' : 'secondary'}>
-                            {user.status}
+                            {user.status || 'inactive'}
                           </Badge>
                         </div>
                         <CardDescription className="flex items-center gap-4">
                           <span className="flex items-center gap-1">
                             <MdEmail className="w-4 h-4" />
-                            {user.email}
+                            {user.email || '-'}
                           </span>
                           <span className="flex items-center gap-1">
                             <MdPerson className="w-4 h-4" />
-                            Joined {new Date(user.joinedAt).toLocaleDateString()}
+                            Joined {user.joinedAt ? new Date(user.joinedAt).toLocaleDateString() : 'N/A'}
                           </span>
                         </CardDescription>
                       </div>

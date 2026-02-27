@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,14 +7,22 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { MdArrowBack, MdPayment, MdInfo } from 'react-icons/md';
-import { usePayment } from '@/hooks/useQueries';
+import { usePayment, useUpdatePaymentStatus } from '@/hooks/useQueries';
+import { EditPaymentStatusModal } from '@/components/modals/EditPaymentStatusModal';
+import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 import { FaCalendar } from 'react-icons/fa';
 
 export default function PaymentView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { hasPermission, user } = useAuth();
   const { data: payment, isLoading } = usePayment(id || '');
+  const updateStatus = useUpdatePaymentStatus();
+  const [editOpen, setEditOpen] = useState(false);
+
+  const canManagePayments = hasPermission('payments', 'manage');
+  const isAdmin = user?.role === 'admin';
 
   const getStatusBadge = (status: string) => {
     const variants = {
@@ -84,10 +93,21 @@ export default function PaymentView() {
           <div className="lg:col-span-2 space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MdPayment className="w-5 h-5" />
-                  Payment Information
-                </CardTitle>
+                <div className="flex items-center justify-between gap-4">
+                  <CardTitle className="flex items-center gap-2">
+                    <MdPayment className="w-5 h-5" />
+                    Payment Information
+                  </CardTitle>
+                  {isAdmin && canManagePayments && (
+                    <Button
+                      variant="outline"
+                      onClick={() => setEditOpen(true)}
+                      disabled={updateStatus.isPending}
+                    >
+                      Edit Status
+                    </Button>
+                  )}
+                </div>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-2 gap-4">
@@ -208,6 +228,23 @@ export default function PaymentView() {
           </div>
         </div>
       </div>
+
+      {payment && isAdmin && canManagePayments && (
+        <EditPaymentStatusModal
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          payment={payment}
+          isLoading={updateStatus.isPending}
+          onUpdate={(status, notes) => {
+            updateStatus.mutate(
+              { id: payment.id, status, notes },
+              {
+                onSuccess: () => setEditOpen(false),
+              }
+            );
+          }}
+        />
+      )}
     </>
   );
 }

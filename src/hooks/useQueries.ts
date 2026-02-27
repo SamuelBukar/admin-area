@@ -11,6 +11,7 @@ import type { RegisterRequest, LoginRequest, AuthResponse } from '@/types/auth';
 import type { ChangePasswordRequest } from '@/types/user';
 import { queryKeys } from '@/lib/queryKeys';
 import { toast } from 'sonner';
+import { getPreciseErrorMessage } from '@/lib/errorMessage';
 
 // ============================================================================
 // Authentication Queries & Mutations
@@ -29,7 +30,7 @@ export const useRegister = () => {
       toast.success('Registration successful');
     },
     onError: (error) => {
-      toast.error('Registration failed');
+      toast.error(getPreciseErrorMessage(error) ?? 'Registration failed');
       console.error('Register error:', error);
     },
   });
@@ -49,11 +50,7 @@ export const useLogin = () => {
       toast.success('Login successful');
     },
     onError: (error) => {
-      if (error instanceof Error && (error as any).status === 401) {
-        toast.error('Invalid email or password');
-      } else {
-        toast.error('Login failed');
-      }
+      toast.error(getPreciseErrorMessage(error) ?? 'Login failed');
       console.error('Login error:', error);
     },
   });
@@ -72,7 +69,7 @@ export const useLogout = () => {
       toast.success('Logged out successfully');
     },
     onError: (error) => {
-      toast.error('Logout failed');
+      toast.error(getPreciseErrorMessage(error) ?? 'Logout failed');
       console.error('Logout error:', error);
     },
   });
@@ -85,7 +82,7 @@ export const useRefreshToken = () => {
       localStorage.setItem('auth_token', data.token);
     },
     onError: (error) => {
-      toast.error('Token refresh failed');
+      toast.error(getPreciseErrorMessage(error) ?? 'Token refresh failed');
       console.error('Refresh token error:', error);
     },
   });
@@ -99,7 +96,7 @@ export const useSend2FA = () => {
       toast.success('2FA code sent to email');
     },
     onError: (error) => {
-      toast.error('Failed to send 2FA code');
+      toast.error(getPreciseErrorMessage(error) ?? 'Failed to send 2FA code');
       console.error('Send 2FA error:', error);
     },
   });
@@ -112,7 +109,7 @@ export const useRequest2FALoginCode = () => {
       toast.success('2FA code sent to email');
     },
     onError: (error) => {
-      toast.error('Failed to request 2FA code');
+      toast.error(getPreciseErrorMessage(error) ?? 'Failed to request 2FA code');
       console.error('Request 2FA code error:', error);
     },
   });
@@ -126,7 +123,7 @@ export const useVerify2FA = () => {
       toast.success('2FA verification successful');
     },
     onError: (error) => {
-      toast.error('2FA verification failed');
+      toast.error(getPreciseErrorMessage(error) ?? '2FA verification failed');
       console.error('Verify 2FA error:', error);
     },
   });
@@ -145,7 +142,7 @@ export const useVerify2FAAndLogin = () => {
       toast.success('Login successful');
     },
     onError: (error) => {
-      toast.error('2FA login verification failed');
+      toast.error(getPreciseErrorMessage(error) ?? '2FA login verification failed');
       console.error('Verify 2FA and login error:', error);
     },
   });
@@ -158,7 +155,7 @@ export const useEnable2FA = () => {
       toast.success('2FA enabled successfully');
     },
     onError: (error) => {
-      toast.error('Failed to enable 2FA');
+      toast.error(getPreciseErrorMessage(error) ?? 'Failed to enable 2FA');
       console.error('Enable 2FA error:', error);
     },
   });
@@ -171,7 +168,7 @@ export const useDisable2FA = () => {
       toast.success('2FA disabled successfully');
     },
     onError: (error) => {
-      toast.error('Failed to disable 2FA');
+      toast.error(getPreciseErrorMessage(error) ?? 'Failed to disable 2FA');
       console.error('Disable 2FA error:', error);
     },
   });
@@ -200,7 +197,7 @@ export const useUpdateMe = () => {
       toast.success('Profile updated successfully');
     },
     onError: (error) => {
-      toast.error('Failed to update profile');
+      toast.error(getPreciseErrorMessage(error) ?? 'Failed to update profile');
       console.error('Update me error:', error);
     },
   });
@@ -213,7 +210,7 @@ export const useChangePassword = () => {
       toast.success('Password changed successfully');
     },
     onError: (error) => {
-      toast.error('Failed to change password');
+      toast.error(getPreciseErrorMessage(error) ?? 'Failed to change password');
       console.error('Change password error:', error);
     },
   });
@@ -230,7 +227,7 @@ export const useDeleteMe = () => {
       toast.success('Account deleted successfully');
     },
     onError: (error) => {
-      toast.error('Failed to delete account');
+      toast.error(getPreciseErrorMessage(error) ?? 'Failed to delete account');
       console.error('Delete me error:', error);
     },
   });
@@ -258,11 +255,10 @@ export const useRecentActivity = () => {
 
 // Pages Queries
 export const usePages = () => {
-  return useQuery<string[]>({
+  return useQuery<Page[]>({
     queryKey: queryKeys.pages.all,
     queryFn: pagesApi.getAll,
     staleTime: 1000 * 60, // 1 minute
-    select: (data) => (Array.isArray(data) ? data : []),
   });
 };
 
@@ -277,7 +273,7 @@ export const useCreatePage = () => {
       toast.success('Page created successfully');
     },
     onError: (error) => {
-      toast.error('Failed to create page');
+      toast.error(getPreciseErrorMessage(error) ?? 'Failed to create page');
       console.error('Create page error:', error);
     },
   });
@@ -315,7 +311,7 @@ export const useLinkTemplates = () => {
       }
     },
     onError: (error) => {
-      toast.error('Failed to link templates');
+      toast.error(getPreciseErrorMessage(error) ?? 'Failed to link templates');
       console.error('Link templates error:', error);
     },
   });
@@ -332,8 +328,80 @@ export const useDeletePage = () => {
       toast.success('Page deleted successfully');
     },
     onError: (error) => {
-      toast.error('Failed to delete page');
+      toast.error(getPreciseErrorMessage(error) ?? 'Failed to delete page');
       console.error('Delete page error:', error);
+    },
+  });
+};
+
+export const useDeletePages = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      await Promise.all(ids.map((id) => pagesApi.delete(id)));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.pages.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.stats });
+      toast.success('Pages deleted successfully');
+    },
+    onError: (error) => {
+      toast.error(getPreciseErrorMessage(error) ?? 'Failed to delete pages');
+      console.error('Delete pages error:', error);
+    },
+  });
+};
+
+export const useDuplicatePage = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (pageId: string) => pagesApi.duplicatePage(pageId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.pages.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.stats });
+      toast.success('Page duplicated successfully');
+    },
+    onError: (error) => {
+      toast.error(getPreciseErrorMessage(error) ?? 'Failed to duplicate page');
+      console.error('Duplicate page error:', error);
+    },
+  });
+};
+
+export const usePublishExistingPage = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (pageId: string) => pagesApi.publishPage(pageId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.pages.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.pages.published });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.stats });
+      toast.success('Page published successfully');
+    },
+    onError: (error) => {
+      toast.error(getPreciseErrorMessage(error) ?? 'Failed to publish page');
+      console.error('Publish page error:', error);
+    },
+  });
+};
+
+export const useUnpublishPage = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (pageId: string) => pagesApi.unpublishPage(pageId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.pages.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.pages.published });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.stats });
+      toast.success('Page unpublished successfully');
+    },
+    onError: (error) => {
+      toast.error(getPreciseErrorMessage(error) ?? 'Failed to unpublish page');
+      console.error('Unpublish page error:', error);
     },
   });
 };
@@ -375,7 +443,7 @@ export const usePublishPage = () => {
       toast.success('Page published successfully');
     },
     onError: (error) => {
-      toast.error('Failed to publish page');
+      toast.error(getPreciseErrorMessage(error) ?? 'Failed to publish page');
       console.error('Publish page error:', error);
     },
   });
@@ -393,7 +461,7 @@ export const useUpdatePageTemplate = () => {
       toast.success('Page template updated successfully');
     },
     onError: (error) => {
-      toast.error('Failed to update page template');
+      toast.error(getPreciseErrorMessage(error) ?? 'Failed to update page template');
       console.error('Update page template error:', error);
     },
   });
@@ -419,7 +487,6 @@ export const useUsers = () => {
     queryKey: queryKeys.users.all,
     queryFn: usersApi.getAll,
     staleTime: 1000 * 60, // 1 minute
-    select: (data) => (Array.isArray(data) ? data : []),
   });
 };
 
@@ -427,14 +494,15 @@ export const useCreateUser = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: Partial<User>) => usersApi.create(data),
+    mutationFn: (data: { name: string; email: string; role: User['role']; status?: User['status']; permissions?: User['permissions']; password?: string }) =>
+      usersApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.stats });
       toast.success('User created successfully');
     },
     onError: (error) => {
-      toast.error('Failed to create user');
+      toast.error(getPreciseErrorMessage(error) ?? 'Failed to create user');
       console.error('Create user error:', error);
     },
   });
@@ -451,7 +519,7 @@ export const useUpdateUser = () => {
       toast.success('User updated successfully');
     },
     onError: (error) => {
-      toast.error('Failed to update user');
+      toast.error(getPreciseErrorMessage(error) ?? 'Failed to update user');
       console.error('Update user error:', error);
     },
   });
@@ -468,7 +536,7 @@ export const useDeleteUser = () => {
       toast.success('User deleted successfully');
     },
     onError: (error) => {
-      toast.error('Failed to delete user');
+      toast.error(getPreciseErrorMessage(error) ?? 'Failed to delete user');
       console.error('Delete user error:', error);
     },
   });
@@ -480,27 +548,30 @@ export const usePayments = () => {
     queryKey: queryKeys.payments.all,
     queryFn: paymentsApi.getAll,
     staleTime: 1000 * 60, // 1 minute
-    select: (data) => (Array.isArray(data) ? data : []),
   });
 };
 
 export const useUserPayments = (userId: string) => {
   return useQuery<Payment[]>({
     queryKey: queryKeys.payments.byUser(userId),
-    queryFn: () => paymentsApi.getByUserId(userId),
+    queryFn: async () => {
+      const list = await paymentsApi.getAll();
+      return list.filter((p) => p.userId === userId);
+    },
     enabled: !!userId,
     staleTime: 1000 * 60,
-    select: (data) => (Array.isArray(data) ? data : []),
   });
 };
 
 export const usePaymentHistory = (userId: string) => {
   return useQuery<Payment[]>({
     queryKey: queryKeys.payments.byUser(userId),
-    queryFn: () => paymentsApi.getByUserId(userId),
+    queryFn: async () => {
+      const list = await paymentsApi.getAll();
+      return list.filter((p) => p.userId === userId);
+    },
     enabled: !!userId,
     staleTime: 1000 * 60,
-    select: (data) => (Array.isArray(data) ? data : []),
   });
 };
 
@@ -540,7 +611,7 @@ export const useUpdatePaymentStatus = () => {
       toast.success('Payment status updated successfully');
     },
     onError: (error) => {
-      toast.error('Failed to update payment status');
+      toast.error(getPreciseErrorMessage(error) ?? 'Failed to update payment status');
       console.error('Update payment status error:', error);
     },
   });
@@ -552,17 +623,18 @@ export const useApplications = () => {
     queryKey: queryKeys.applications.all,
     queryFn: applicationsApi.getAll,
     staleTime: 1000 * 60,
-    select: (data) => (Array.isArray(data) ? data : []),
   });
 };
 
 export const useUserApplications = (userId: string) => {
   return useQuery<Application[]>({
     queryKey: queryKeys.applications.byUser(userId),
-    queryFn: () => applicationsApi.getByUserId(userId),
+    queryFn: async () => {
+      const list = await applicationsApi.getAll();
+      return list.filter((a) => a.userId === userId);
+    },
     enabled: !!userId,
     staleTime: 1000 * 60,
-    select: (data) => (Array.isArray(data) ? data : []),
   });
 };
 
@@ -606,7 +678,7 @@ export const useCreateApplication = () => {
       toast.success('Application created successfully');
     },
     onError: (error) => {
-      toast.error('Failed to create application');
+      toast.error(getPreciseErrorMessage(error) ?? 'Failed to create application');
       console.error('Create application error:', error);
     },
   });
@@ -629,7 +701,7 @@ export const useUpdateApplicationStatus = () => {
       toast.success('Application status updated successfully');
     },
     onError: (error) => {
-      toast.error('Failed to update application status');
+      toast.error(getPreciseErrorMessage(error) ?? 'Failed to update application status');
       console.error('Update application status error:', error);
     },
   });
@@ -653,7 +725,7 @@ export const useSubmitApplication = () => {
       }
     },
     onError: (error) => {
-      toast.error('Failed to submit application');
+      toast.error(getPreciseErrorMessage(error) ?? 'Failed to submit application');
       console.error('Submit application error:', error);
     },
   });
@@ -674,7 +746,6 @@ export const useAllocations = () => {
     queryKey: queryKeys.allocations.all,
     queryFn: allocationsApi.getAll,
     staleTime: 1000 * 60,
-    select: (data) => (Array.isArray(data) ? data : []),
   });
 };
 
@@ -684,7 +755,6 @@ export const useUserAllocations = (userId: string) => {
     queryFn: () => allocationsApi.getByUserId(userId),
     enabled: !!userId,
     staleTime: 1000 * 60,
-    select: (data) => (Array.isArray(data) ? data : []),
   });
 };
 
@@ -709,8 +779,8 @@ export const useUpdateAllocationStatus = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, status }: { id: string; status: Allocation['status'] }) =>
-      allocationsApi.updateStatus(id, status),
+    mutationFn: ({ id, status, notes }: { id: string; status: Allocation['status']; notes?: string }) =>
+      allocationsApi.updateStatus(id, status, notes),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.allocations.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.allocations.detail(data.id) });
@@ -719,7 +789,7 @@ export const useUpdateAllocationStatus = () => {
       toast.success('Allocation status updated successfully');
     },
     onError: (error) => {
-      toast.error('Failed to update allocation status');
+      toast.error(getPreciseErrorMessage(error) ?? 'Failed to update allocation status');
       console.error('Update allocation status error:', error);
     },
   });
@@ -729,7 +799,10 @@ export const useUpdateAllocationStatus = () => {
 export const useExpenses = (userId: string) => {
   return useQuery({
     queryKey: queryKeys.expenses.byUser(userId),
-    queryFn: () => expensesApi.getByUserId(userId),
+    queryFn: async () => {
+      const list = await expensesApi.getAll();
+      return list.filter((e) => e.userId === userId);
+    },
     enabled: !!userId,
     staleTime: 1000 * 60,
   });
@@ -847,7 +920,7 @@ export const useGenerateCertificate = () => {
 export const useUserDetail = (userId: string) => {
   return useQuery({
     queryKey: queryKeys.users.detail(userId),
-    queryFn: () => usersApi.getAll().then(users => users.find(u => u.id === userId)),
+    queryFn: () => usersApi.getById(userId),
     enabled: !!userId,
     staleTime: 1000 * 60,
   });
@@ -880,7 +953,7 @@ export const useCreatePayment = () => {
       toast.success('Payment created successfully');
     },
     onError: (error) => {
-      toast.error('Failed to create payment');
+      toast.error(getPreciseErrorMessage(error) ?? 'Failed to create payment');
       console.error('Create payment error:', error);
     },
   });
@@ -913,7 +986,7 @@ export const useCreateAllocation = () => {
       toast.success('Allocation created successfully');
     },
     onError: (error) => {
-      toast.error('Failed to create allocation');
+      toast.error(getPreciseErrorMessage(error) ?? 'Failed to create allocation');
       console.error('Create allocation error:', error);
     },
   });

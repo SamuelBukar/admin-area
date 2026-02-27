@@ -314,12 +314,6 @@ export const FormBuilder = ({ pageId, initialElements }: FormBuilderProps) => {
       { elements, userId, title: trimmedName },
       {
         onSuccess: () => {
-          // Also store in localStorage for draft recovery
-          const draftData = {
-            elements,
-            lastModified: new Date().toISOString(),
-          };
-          localStorage.setItem('landadmin-draft', JSON.stringify(draftData));
           toast.success('Template saved! You can now use it in Create Forms.');
         },
         onError: () => {

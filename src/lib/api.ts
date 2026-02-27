@@ -1,13 +1,7 @@
-// API client and data fetching functions
-// In production, replace these with actual API calls
-// 
-// To use a real API:
-// 1. Set VITE_API_URL in your .env file (see env.example)
-// 2. Replace the mock implementations below with calls to apiClient
-//    Example: import { apiGet } from './apiClient';
-//             const data = await apiGet('/dashboard/stats');
+// API client and data fetching functions (real backend via `apiClient`)
 
 import { apiGet, apiPost, apiPut, apiPatch, apiDelete } from './apiClient';
+import { getBaseUrl } from '@/config/env';
 import type { FormElement } from '@/types/builder';
 import type { Payment, PaymentSummary } from '@/types/payment';
 import type { Application, ApplicationStats, ApplicationStatusHistory } from '@/types/application';
@@ -36,6 +30,28 @@ export interface ApiResponse<T> {
   data: T;
   message?: string | null;
   code?: string;
+}
+
+type ListEnvelope<T> = {
+  data: T[];
+  [key: string]: unknown;
+};
+
+function extractList<T>(value: unknown): T[] | null {
+  if (Array.isArray(value)) return value as T[];
+  if (typeof value !== 'object' || value === null) return null;
+  if (!('data' in value)) return null;
+  const data = (value as Record<string, unknown>).data;
+  if (!Array.isArray(data)) return null;
+  return data as T[];
+}
+
+async function apiListGet<T>(endpoint: string): Promise<T[]> {
+  // Many endpoints are paginated: { ok, data: { data: [...] } }.
+  // `apiClient` unwraps the first `data`, leaving either an array, or `{ data: [...] }`.
+  const raw = await apiGet<unknown>(endpoint);
+  const list = extractList<T>(raw);
+  return list ?? [];
 }
 
 export interface Page {
@@ -83,6 +99,26 @@ export interface User {
   permissions?: Permission;
 }
 
+type UserCreateInput = {
+  name: string;
+  email: string;
+  role: UserRole;
+  status?: 'active' | 'inactive';
+  permissions?: Permission;
+  /**
+   * Optional. If omitted, backend can auto-generate / invite flow.
+   */
+  password?: string;
+};
+
+type UserUpdateInput = {
+  name?: string;
+  email?: string;
+  role?: UserRole;
+  status?: 'active' | 'inactive';
+  permissions?: Permission;
+};
+
 // ============================================================================
 // Authentication & Current User API
 // ============================================================================
@@ -117,8 +153,7 @@ export const authApi = {
 
   request2FALoginCode: (email: string): Promise<void> => {
     const payload: TwoFactorRequestLoginCodeRequest = { email };
-    // For login flows we can reuse the same backend endpoint
-    return apiPost<unknown>('/auth/2fa/send', payload).then(() => {});
+    return apiPost<unknown>('/auth/2fa/request-login-code', payload).then(() => {});
   },
 
   verify2FA: (email: string, code: string): Promise<void> => {
@@ -178,21 +213,42 @@ export const dashboardApi = {
   },
 
   getRecentActivity: async (): Promise<Activity[]> => {
-    // Backend returns: { ok, data: { data: Activity[] } }
-    // apiClient unwraps the first `data`, so we receive { data: Activity[] }
-    const wrapped = await apiGet<{ data: Activity[] }>('/dashboard/activity');
-    return wrapped.data;
+    return apiListGet<Activity>('/dashboard/activity');
+  },
+};
+
+// ============================================================================
+// Root & Health
+// ============================================================================
+
+export const systemApi = {
+  getInfo: async (): Promise<unknown> => {
+    // Note: root endpoint is outside `/api`
+    return apiGet<unknown>(`${getBaseUrl()}/`);
+  },
+
+  health: async (): Promise<unknown> => {
+    // Note: health endpoint is outside `/api`
+    return apiGet<unknown>(`${getBaseUrl()}/health`);
   },
 };
 
 // Pages API (real backend)
 export const pagesApi = {
   getAll: async (): Promise<Page[]> => {
-    return apiGet<Page[]>('/pages');
+    return apiListGet<Page>('/pages');
   },
 
   create: async (data: Partial<Page>): Promise<Page> => {
     return apiPost<Page>('/pages', data);
+  },
+
+  update: async (id: string, data: Partial<Page>): Promise<Page> => {
+    return apiPut<Page>(`/pages/${id}`, data);
+  },
+
+  patch: async (id: string, data: Partial<Page>): Promise<Page> => {
+    return apiPatch<Page>(`/pages/${id}`, data);
   },
 
   // Save a template (auto-saved from builder)
@@ -233,9 +289,7 @@ export const pagesApi = {
     return apiGet<Page>(`/pages/${id}`);
   },
 
-  publishPage: async (pageId: string, elements: FormElement[]): Promise<Page> => {
-    // Update elements, then publish
-    await apiPut<Page>(`/pages/${pageId}`, { elements });
+  publishPage: async (pageId: string): Promise<Page> => {
     return apiPost<Page>(`/pages/${pageId}/publish`);
   },
 
@@ -243,7 +297,7 @@ export const pagesApi = {
     pageId: string,
     elements: FormElement[]
   ): Promise<Page> => {
-    return apiPut<Page>(`/pages/${pageId}`, { elements });
+    return pagesApi.update(pageId, { elements });
   },
 
   getPageTemplate: async (pageId: string): Promise<FormElement[]> => {
@@ -261,21 +315,37 @@ export const pagesApi = {
 
   getPublishedPages: async (): Promise<Page[]> => {
     // Backend can filter via query or separate endpoint; we use query
-    return apiGet<Page[]>('/pages?status=published');
+    return apiListGet<Page>('/pages?status=published');
   },
 };
 
 // Users API (real backend)
 export const usersApi = {
   getAll: async (): Promise<User[]> => {
-    const users = await apiGet<User[]>('/users');
+    const users = await apiListGet<User>('/users');
     return users.map((user) => ({
-          ...user,
-          permissions: user.permissions || getDefaultPermissionsForRole(user.role),
-        }));
+      ...user,
+      permissions: user.permissions || getDefaultPermissionsForRole(user.role),
+    }));
   },
 
-  create: async (data: Partial<User>): Promise<User> => {
+  getById: async (id: string): Promise<User> => {
+    const user = await apiGet<User>(`/users/${id}`);
+    return {
+      ...user,
+      permissions: user.permissions || getDefaultPermissionsForRole(user.role),
+    };
+  },
+
+  getDashboardStats: async (userId: string): Promise<UserDashboardStats> => {
+    return apiGet<UserDashboardStats>(`/users/${userId}/dashboard-stats`);
+  },
+
+  getProgressMetrics: async (userId: string): Promise<ProgressMetrics> => {
+    return apiGet<ProgressMetrics>(`/users/${userId}/progress-metrics`);
+  },
+
+  create: async (data: UserCreateInput): Promise<User> => {
     const created = await apiPost<User>('/users', data);
     return {
       ...created,
@@ -284,7 +354,7 @@ export const usersApi = {
     };
   },
 
-  update: async (id: string, data: Partial<User>): Promise<User> => {
+  update: async (id: string, data: UserUpdateInput): Promise<User> => {
     const updated = await apiPut<User>(`/users/${id}`, data);
     return {
       ...updated,
@@ -301,15 +371,15 @@ export const usersApi = {
 // Payments API (real backend)
 export const paymentsApi = {
   getAll: async (): Promise<Payment[]> => {
-    return apiGet<Payment[]>('/payments');
+    return apiListGet<Payment>('/payments');
   },
 
   getByUserId: async (userId: string): Promise<Payment[]> => {
-    return apiGet<Payment[]>(`/payments?userId=${encodeURIComponent(userId)}`);
+    return apiListGet<Payment>(`/payments?userId=${encodeURIComponent(userId)}`);
   },
 
   getByApplicationId: async (applicationId: string): Promise<Payment[]> => {
-    return apiGet<Payment[]>(
+    return apiListGet<Payment>(
       `/payments?applicationId=${encodeURIComponent(applicationId)}`
     );
   },
@@ -331,21 +401,20 @@ export const paymentsApi = {
   },
 
   getSummary: async (userId?: string): Promise<PaymentSummary> => {
-    const query = userId ? `?userId=${encodeURIComponent(userId)}` : '';
-    return apiGet<PaymentSummary>(`/payments/summary${query}`);
+    // Postman: GET /payments/summary (backend can scope by role/token)
+    return apiGet<PaymentSummary>('/payments/summary');
   },
 };
 
 // Applications API (real backend)
 export const applicationsApi = {
   getAll: async (): Promise<Application[]> => {
-    return apiGet<Application[]>('/applications');
+    return apiListGet<Application>('/applications');
   },
 
   getByUserId: async (userId: string): Promise<Application[]> => {
-    return apiGet<Application[]>(
-      `/applications?userId=${encodeURIComponent(userId)}`
-    );
+    // Postman: GET /applications (backend can scope by role/token)
+    return apiListGet<Application>('/applications');
   },
 
   getById: async (id: string): Promise<Application | undefined> => {
@@ -374,9 +443,9 @@ export const applicationsApi = {
     pageId: string,
     userId?: string
   ): Promise<Application[]> => {
-    const params = new URLSearchParams({ pageId });
-    if (userId) params.set('userId', userId);
-    return apiGet<Application[]>(`/applications?${params.toString()}`);
+    // Backend may support query params; fall back to filtering client-side
+    const list = await apiListGet<Application>('/applications');
+    return list.filter((a) => a.pageId === pageId && (!userId || a.userId === userId));
   },
 
   updateStatus: async (
@@ -399,25 +468,23 @@ export const applicationsApi = {
   },
 
   getStats: async (userId?: string): Promise<ApplicationStats> => {
-    const query = userId ? `?userId=${encodeURIComponent(userId)}` : '';
-    return apiGet<ApplicationStats>(`/applications/stats${query}`);
+    return apiGet<ApplicationStats>('/applications/stats');
   },
 };
 
 // Allocations API (real backend)
 export const allocationsApi = {
   getAll: async (): Promise<Allocation[]> => {
-    return apiGet<Allocation[]>('/allocations');
+    return apiListGet<Allocation>('/allocations');
   },
 
   getByUserId: async (userId: string): Promise<Allocation[]> => {
-    return apiGet<Allocation[]>(
-      `/allocations?userId=${encodeURIComponent(userId)}`
-    );
+    const list = await apiListGet<Allocation>('/allocations');
+    return list.filter((a) => a.userId === userId);
   },
 
   getByApplicationId: async (applicationId: string): Promise<Allocation[]> => {
-    return apiGet<Allocation[]>(
+    return apiListGet<Allocation>(
       `/allocations?applicationId=${encodeURIComponent(applicationId)}`
     );
   },
@@ -432,21 +499,21 @@ export const allocationsApi = {
 
   updateStatus: async (
     id: string,
-    status: Allocation['status']
+    status: Allocation['status'],
+    notes?: string
   ): Promise<Allocation> => {
-    return apiPatch<Allocation>(`/allocations/${id}/status`, { status });
+    return apiPatch<Allocation>(`/allocations/${id}/status`, { status, notes });
   },
 
   getStats: async (userId?: string): Promise<AllocationStats> => {
-    const query = userId ? `?userId=${encodeURIComponent(userId)}` : '';
-    return apiGet<AllocationStats>(`/allocations/stats${query}`);
+    return apiGet<AllocationStats>('/allocations/stats');
   },
 };
 
 // Expenses API (real backend)
 export const expensesApi = {
-  getByUserId: async (userId: string): Promise<Expense[]> => {
-    return apiGet<Expense[]>(`/expenses?userId=${encodeURIComponent(userId)}`);
+  getAll: async (): Promise<Expense[]> => {
+    return apiListGet<Expense>('/expenses');
   },
 
   getByDateRange: async (
@@ -454,47 +521,35 @@ export const expensesApi = {
     startDate: string,
     endDate: string
   ): Promise<Expense[]> => {
-    const params = new URLSearchParams({
-      userId,
-      startDate,
-      endDate,
-    });
-    return apiGet<Expense[]>(`/expenses?${params.toString()}`);
+    const list = await apiListGet<Expense>('/expenses');
+    return list.filter((e) => e.date >= startDate && e.date <= endDate);
   },
 
   getChartData: async (
     userId: string,
     days: number = 30
   ): Promise<ExpenseChartData[]> => {
-    const params = new URLSearchParams({
-      userId,
-      days: String(days),
-    });
-    return apiGet<ExpenseChartData[]>(`/expenses/chart?${params.toString()}`);
+    // Postman: GET /expenses/chart
+    return apiGet<ExpenseChartData[]>('/expenses/chart');
   },
 
   getSummary: async (
     userId: string,
     days: number = 30
   ): Promise<ExpenseSummary> => {
-    const params = new URLSearchParams({
-      userId,
-      days: String(days),
-    });
-    return apiGet<ExpenseSummary>(
-      `/expenses/summary?${params.toString()}`
-    );
+    // Postman: GET /expenses/summary
+    return apiGet<ExpenseSummary>('/expenses/summary');
   },
 };
 
 // Dashboard API Extensions (real backend)
 export const userDashboardApi = {
   getStats: async (userId: string): Promise<UserDashboardStats> => {
-    return apiGet<UserDashboardStats>(`/users/${userId}/dashboard-stats`);
+    return usersApi.getDashboardStats(userId);
   },
 
   getProgressMetrics: async (userId: string): Promise<ProgressMetrics> => {
-    return apiGet<ProgressMetrics>(`/users/${userId}/progress-metrics`);
+    return usersApi.getProgressMetrics(userId);
   },
 };
 

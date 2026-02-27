@@ -23,7 +23,7 @@ import {
   MdLink,
   MdDescription
 } from 'react-icons/md';
-import { usePages, useDeletePage } from '@/hooks/useQueries';
+import { usePages, useDeletePages, useDuplicatePage, usePublishExistingPage, useUnpublishPage } from '@/hooks/useQueries';
 import { useAuth } from '@/contexts/AuthContext';
 import { CreatePageModal } from '@/components/modals/CreatePageModal';
 import { DeleteConfirmModal } from '@/components/modals/DeleteConfirmModal';
@@ -47,7 +47,10 @@ const Pages = () => {
   const [selectedPage, setSelectedPage] = useState<{ id: string; title: string } | null>(null);
   
   const { data: pages, isLoading } = usePages();
-  const deletePage = useDeletePage();
+  const deletePages = useDeletePages();
+  const duplicatePage = useDuplicatePage();
+  const publishPage = usePublishExistingPage();
+  const unpublishPage = useUnpublishPage();
   const { hasPermission } = useAuth();
 
   // always work with an actual array even if API returned something unexpected
@@ -118,6 +121,7 @@ const Pages = () => {
 
   const handleBulkDelete = () => {
     if (selectedPages.size === 0) return;
+    setSelectedPage(null);
     setDeleteModalOpen(true);
   };
 
@@ -127,14 +131,17 @@ const Pages = () => {
   };
 
   const handleDeleteConfirm = () => {
-    if (selectedPage) {
-      deletePage.mutate(selectedPage.id, {
-        onSuccess: () => {
-          setDeleteModalOpen(false);
-          setSelectedPage(null);
-        },
-      });
-    }
+    const ids =
+      selectedPage?.id ? [selectedPage.id] : Array.from(selectedPages.values());
+    if (ids.length === 0) return;
+
+    deletePages.mutate(ids, {
+      onSuccess: () => {
+        setDeleteModalOpen(false);
+        setSelectedPage(null);
+        setSelectedPages(new Set());
+      },
+    });
   };
 
   const templatePages = filteredAndSortedPages.filter(p => p.isTemplate && !p.isNamed);
@@ -623,13 +630,50 @@ const Pages = () => {
                                           className="h-8 w-8 p-0"
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            toast.success('Page duplicated!');
+                                            duplicatePage.mutate(page.id, {
+                                              onSuccess: (created) => {
+                                                // Take user to the duplicated page/template for editing
+                                                if (created?.id) navigate(`/dashboard/builder?pageId=${created.id}`);
+                                              },
+                                            });
                                           }}
+                                          disabled={!canCreate || duplicatePage.isPending}
                                         >
                                           <MdContentCopy className="w-4 h-4" />
                                         </Button>
                                       </TooltipTrigger>
                                       <TooltipContent>Duplicate</TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                )}
+                                {canPublish && (
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-8 w-8 p-0"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (page.status === 'published') {
+                                              unpublishPage.mutate(page.id);
+                                            } else {
+                                              publishPage.mutate(page.id);
+                                            }
+                                          }}
+                                          disabled={publishPage.isPending || unpublishPage.isPending}
+                                        >
+                                          {page.status === 'published' ? (
+                                            <MdVisibilityOff className="w-4 h-4" />
+                                          ) : (
+                                            <MdVisibility className="w-4 h-4" />
+                                          )}
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        {page.status === 'published' ? 'Unpublish' : 'Publish'}
+                                      </TooltipContent>
                                     </Tooltip>
                                   </TooltipProvider>
                                 )}
@@ -672,8 +716,11 @@ const Pages = () => {
           onOpenChange={setDeleteModalOpen}
           onConfirm={handleDeleteConfirm}
           title="Delete Page"
-          itemName={selectedPage?.title}
-          isLoading={deletePage.isPending}
+          itemName={
+            selectedPage?.title ||
+            (selectedPages.size > 0 ? `${selectedPages.size} selected pages` : undefined)
+          }
+          isLoading={deletePages.isPending}
         />
       </div>
     </>

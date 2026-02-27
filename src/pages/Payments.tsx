@@ -63,14 +63,14 @@ export default function Payments() {
   const filteredAndSortedPayments = useMemo(() => {
     let filtered = payments.filter((payment) => {
       const matchesSearch = 
-        payment.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        payment.transactionId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (isAdmin && payment.userId.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (payment.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (payment.transactionId || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (isAdmin && (payment.userId || '').toLowerCase().includes(searchQuery.toLowerCase())) ||
         (isAdmin && (() => {
           const applicantInfo = getApplicantInfo(payment);
           return applicantInfo ? 
-            applicantInfo.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            applicantInfo.email.toLowerCase().includes(searchQuery.toLowerCase())
+            (applicantInfo.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (applicantInfo.email || '').toLowerCase().includes(searchQuery.toLowerCase())
             : false;
         })());
       
@@ -87,8 +87,8 @@ export default function Payments() {
 
         switch (sortField) {
           case 'description':
-            aValue = a.description.toLowerCase();
-            bValue = b.description.toLowerCase();
+            aValue = (a.description || '').toLowerCase();
+            bValue = (b.description || '').toLowerCase();
             break;
           case 'amount':
             aValue = a.amount;
@@ -314,16 +314,16 @@ export default function Payments() {
                                 )}
                               </div>
                             ) : (
-                              <div className="font-mono text-xs">{payment.userId}</div>
+                              <div className="font-mono text-xs">{payment.userId || '-'}</div>
                             )}
                           </TableCell>
                         )}
-                        <TableCell className="font-medium">{payment.description}</TableCell>
-                        <TableCell>₦{payment.amount.toLocaleString()}</TableCell>
+                        <TableCell className="font-medium">{payment.description || '-'}</TableCell>
+                        <TableCell>₦{(payment.amount || 0).toLocaleString()}</TableCell>
                         <TableCell>{getStatusBadge(payment.status)}</TableCell>
                         <TableCell>
                           <span className="text-sm text-muted-foreground">
-                            {payment.feeType.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                            {(payment.feeType || '').replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                           </span>
                         </TableCell>
                         <TableCell>

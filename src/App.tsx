@@ -8,7 +8,7 @@ import { HelmetProvider } from "react-helmet-async";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { RoleProtectedRoute } from "@/components/RoleProtectedRoute";
+import { PermissionProtectedRoute } from "@/components/PermissionProtectedRoute";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -75,15 +75,17 @@ const App = () => (
                 }
               />
               
-              {/* Builder Route - Admin Only */}
+              {/* Builder Route */}
               <Route
                 path="/dashboard/builder"
                 element={
-                  <RoleProtectedRoute allowedRoles={['admin']}>
+                  <PermissionProtectedRoute
+                    requiredPermissions={[{ resource: 'templates', action: 'create' }]}
+                  >
                     <DashboardLayout>
                       <Builder />
                     </DashboardLayout>
-                  </RoleProtectedRoute>
+                  </PermissionProtectedRoute>
                 }
               />
 
@@ -91,20 +93,24 @@ const App = () => (
               <Route
                 path="/dashboard/preview"
                 element={
-                  <RoleProtectedRoute allowedRoles={['admin']}>
+                  <PermissionProtectedRoute
+                    requiredPermissions={[{ resource: 'templates', action: 'create' }]}
+                  >
                     <Preview />
-                  </RoleProtectedRoute>
+                  </PermissionProtectedRoute>
                 }
               />
 
               <Route
                 path="/dashboard/pages"
                 element={
-                  <RoleProtectedRoute allowedRoles={['admin']}>
+                  <PermissionProtectedRoute
+                    requiredPermissions={[{ resource: 'pages', action: 'view' }]}
+                  >
                     <DashboardLayout>
                       <Pages />
                     </DashboardLayout>
-                  </RoleProtectedRoute>
+                  </PermissionProtectedRoute>
                 }
               />
 
@@ -112,25 +118,29 @@ const App = () => (
               <Route
                 path="/dashboard/create-form"
                 element={
-                  <RoleProtectedRoute allowedRoles={['admin']}>
+                  <PermissionProtectedRoute
+                    requiredPermissions={[{ resource: 'pages', action: 'create' }]}
+                  >
                     <DashboardLayout>
                       <ErrorBoundary>
                         <CreateForm />
                       </ErrorBoundary>
                     </DashboardLayout>
-                  </RoleProtectedRoute>
+                  </PermissionProtectedRoute>
                 }
               />
               
-              {/* Page View Route - Admin Only */}
+              {/* Page View Route */}
               <Route
                 path="/dashboard/pages/:id"
                 element={
-                  <RoleProtectedRoute allowedRoles={['admin']}>
+                  <PermissionProtectedRoute
+                    requiredPermissions={[{ resource: 'pages', action: 'view' }]}
+                  >
                     <DashboardLayout>
                       <PageView />
                     </DashboardLayout>
-                  </RoleProtectedRoute>
+                  </PermissionProtectedRoute>
                 }
               />
               
@@ -200,15 +210,22 @@ const App = () => (
                 }
               />
               
-              {/* User Management Route - Admin Only */}
+              {/* User Management Route */}
               <Route
                 path="/dashboard/users"
                 element={
-                  <RoleProtectedRoute allowedRoles={['admin']}>
+                  <PermissionProtectedRoute
+                    requiredPermissions={[
+                      { resource: 'users', action: 'create' },
+                      { resource: 'users', action: 'edit' },
+                      { resource: 'users', action: 'delete' },
+                    ]}
+                    mode="any"
+                  >
                     <DashboardLayout>
                       <UserManagement />
                     </DashboardLayout>
-                  </RoleProtectedRoute>
+                  </PermissionProtectedRoute>
                 }
               />
               

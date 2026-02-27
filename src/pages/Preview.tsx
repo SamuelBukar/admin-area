@@ -5,7 +5,7 @@ import { FormElement } from '@/types/builder';
 import { ElementRenderer } from '@/components/builder/ElementRenderer';
 import { Button } from '@/components/ui/button';
 import { PublishModal } from '@/components/modals/PublishModal';
-import { usePublishPage } from '@/hooks/useQueries';
+import { usePageDetail, usePublishPage } from '@/hooks/useQueries';
 import { useAuth } from '@/contexts/AuthContext';
 import { MdArrowBack, MdPublish } from 'react-icons/md';
 
@@ -13,32 +13,20 @@ const Preview = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { hasPermission } = useAuth();
+  const templateId = searchParams.get('templateId') || '';
+  const { data: page, isLoading: pageLoading } = usePageDetail(templateId);
   const [elements, setElements] = useState<FormElement[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [publishModalOpen, setPublishModalOpen] = useState(false);
   const publishPage = usePublishPage();
   const canPublish = hasPermission('pages', 'publish');
 
   useEffect(() => {
-    const templateId = searchParams.get('templateId');
-    
-    if (templateId) {
-      // Get template from sessionStorage
-      const stored = sessionStorage.getItem('preview-template');
-      if (stored) {
-        try {
-          const templateData = JSON.parse(stored);
-          if (templateData.previewId === templateId && templateData.elements) {
-            setElements(templateData.elements);
-          }
-        } catch (error) {
-          console.error('Failed to parse template data:', error);
-        }
-      }
+    if (page?.elements) {
+      setElements(page.elements);
+    } else {
+      setElements([]);
     }
-    
-    setIsLoading(false);
-  }, [searchParams]);
+  }, [page]);
 
   const handleDelete = () => {
     // No-op in preview
@@ -63,7 +51,7 @@ const Preview = () => {
     );
   };
 
-  if (isLoading) {
+  if (pageLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="text-center">
@@ -74,11 +62,11 @@ const Preview = () => {
     );
   }
 
-  if (elements.length === 0) {
+  if (!templateId || !page) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="text-center">
-          <p className="text-muted-foreground">No template to preview</p>
+          <p className="text-muted-foreground">Template not found</p>
         </div>
       </div>
     );

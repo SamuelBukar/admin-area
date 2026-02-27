@@ -3,10 +3,8 @@
 
 export const env = {
   // API Base URL
-  // In development: uses mock data (set apiUrl empty)
-  // In production: uses hosted API
-  // Override with VITE_API_URL env var to use real API in development
-  apiUrl: import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '' : 'https://admin-area-be.onrender.com'),
+  // Override with VITE_API_URL env var; otherwise use hosted API
+  apiUrl: import.meta.env.VITE_API_URL || 'https://admin-area-be.onrender.com',
   
   // API Timeout in milliseconds
   apiTimeout: parseInt(import.meta.env.VITE_API_TIMEOUT || '30000', 10),
@@ -23,10 +21,7 @@ export const env = {
 
 // Helper function to get full API URL
 export const getApiUrl = (endpoint: string): string => {
-  if (!env.apiUrl) {
-    // If no API URL is set, return empty string for relative URLs or mock data
-    return '';
-  }
+  if (!env.apiUrl) throw new Error('VITE_API_URL is not configured');
   
   // Remove trailing slash from base URL and leading slash from endpoint
   let baseUrl = env.apiUrl.replace(/\/$/, '');
@@ -39,9 +34,13 @@ export const getApiUrl = (endpoint: string): string => {
   return `${baseUrl}${path}`;
 };
 
-// Helper function to check if we should use mock data
-// Returns true only if no API URL is configured
-export const shouldUseMockData = (): boolean => {
-  return !env.apiUrl;
+/**
+ * Base backend URL without the `/api` suffix.
+ * Useful for calling non-API endpoints like `/` and `/health`.
+ */
+export const getBaseUrl = (): string => {
+  if (!env.apiUrl) throw new Error('VITE_API_URL is not configured');
+  const base = env.apiUrl.replace(/\/$/, '');
+  return base.endsWith('/api') ? base.slice(0, -'/api'.length) : base;
 };
 

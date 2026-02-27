@@ -6,44 +6,15 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { 
-  MdDashboard, 
-  MdBuild, 
-  MdPages, 
-  MdPeople, 
-  MdSettings,
   MdLogout,
-  MdPayment,
-  MdAssignment,
-  MdDescription,
-  MdDescription as MdApplications,
-  MdFolderOpen
 } from 'react-icons/md';
 import { toast } from 'sonner';
+import { ALL_NAVIGATION_ITEMS, filterNavigationItems } from '@/config/navigation';
 
 interface DashboardLayoutProps {
   children: ReactNode;
   hideSidebar?: boolean;
 }
-
-interface SidebarItem {
-  path: string;
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-  adminOnly?: boolean;
-}
-
-const allSidebarItems: SidebarItem[] = [
-  { path: '/dashboard', label: 'Dashboard', icon: MdDashboard },
-  { path: '/dashboard/builder', label: 'Builder', icon: MdBuild, adminOnly: true },
-  { path: '/dashboard/pages', label: 'Pages', icon: MdPages, adminOnly: true },
-  { path: '/dashboard/applications', label: 'Applications', icon: MdApplications },
-  { path: '/dashboard/my-applications', label: 'My Applications', icon: MdFolderOpen },
-  { path: '/dashboard/payments', label: 'Payments', icon: MdPayment },
-  { path: '/dashboard/allocations', label: 'Allocations', icon: MdAssignment },
-  { path: '/dashboard/reports', label: 'Reports', icon: MdDescription },
-  { path: '/dashboard/users', label: 'User Management', icon: MdPeople, adminOnly: true },
-  { path: '/dashboard/settings', label: 'Settings', icon: MdSettings },
-];
 
 export const DashboardLayout = ({ children, hideSidebar = false }: DashboardLayoutProps) => {
   const location = useLocation();
@@ -52,36 +23,8 @@ export const DashboardLayout = ({ children, hideSidebar = false }: DashboardLayo
   const isBuilderPage = location.pathname === '/dashboard/builder';
   const shouldHideSidebar = hideSidebar || isBuilderPage;
   
-  // Filter sidebar items based on user role and permissions
-  const isAdmin = user?.role === 'admin';
-  const sidebarItems = allSidebarItems.filter(item => {
-    // Check admin-only items
-    if (item.adminOnly && !isAdmin) return false;
-    
-    // For admin users, always show admin-only items (Pages, Builder, Users)
-    if (isAdmin && item.adminOnly) return true;
-    
-    // Check permissions
-    if (item.path === '/dashboard/builder' && !hasPermission('templates', 'create')) return false;
-    if (item.path === '/dashboard/pages' && !hasPermission('pages', 'view')) return false;
-    if (item.path === '/dashboard/users' && !hasPermission('users', 'create')) return false;
-    if (item.path === '/dashboard/settings' && !hasPermission('settings', 'view')) return false;
-    if (item.path === '/dashboard/applications' && !hasPermission('applications', 'view')) return false;
-    if (item.path === '/dashboard/payments' && !hasPermission('payments', 'view')) return false;
-    if (item.path === '/dashboard/allocations' && !hasPermission('allocations', 'view')) return false;
-    if (item.path === '/dashboard/reports' && !hasPermission('reports', 'view')) return false;
-    
-    // For non-admin users, hide "Pages" and show "Applications" and "My Applications"
-    if (!isAdmin) {
-      if (item.path === '/dashboard/pages') return false;
-      if (item.path === '/dashboard/builder') return false;
-      if (item.path === '/dashboard/users') return false;
-    } else {
-      // For admin, show "Pages" but not "Applications" and "My Applications"
-      if (item.path === '/dashboard/applications' || item.path === '/dashboard/my-applications') return false;
-    }
-    return true;
-  });
+  // Filter sidebar items using centralized config
+  const sidebarItems = filterNavigationItems(ALL_NAVIGATION_ITEMS, user?.role, hasPermission);
 
   const handleLogout = () => {
     logout();

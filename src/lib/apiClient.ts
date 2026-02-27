@@ -38,16 +38,10 @@ export async function apiRequest<T = any>(
     timeout = env.apiTimeout,
   } = options;
 
-  const url = getApiUrl(endpoint);
-  
-  // If no API URL is configured, throw an error or use mock data
-  // For now, we'll throw an error to indicate API is not configured
-  if (!url && !env.isDevelopment) {
-    throw new ApiError(
-      'API URL is not configured. Please set VITE_API_URL in your .env file.',
-      500
-    );
-  }
+  const url =
+    endpoint.startsWith('http://') || endpoint.startsWith('https://')
+      ? endpoint
+      : getApiUrl(endpoint);
 
   const defaultHeaders: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -64,7 +58,7 @@ export async function apiRequest<T = any>(
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 
   try {
-    const response = await fetch(url || endpoint, {
+    const response = await fetch(url, {
       method,
       headers: defaultHeaders,
       body: body ? JSON.stringify(body) : undefined,

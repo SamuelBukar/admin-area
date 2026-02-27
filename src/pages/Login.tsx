@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Helmet } from 'react-helmet-async';
+import { getPreciseErrorMessage } from '@/lib/errorMessage';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -30,9 +31,7 @@ const Login = () => {
       toast.success('Login successful!');
       navigate('/dashboard');
     } catch (error: any) {
-      // if ApiError from our client, show server message if available
-      const msg = error?.message || 'Login failed. Please try again.';
-      toast.error(msg);
+      toast.error(getPreciseErrorMessage(error) ?? 'Login failed. Please try again.');
     } finally {
       setIsLoading(false);
     }

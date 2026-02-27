@@ -1,4 +1,5 @@
-export type UserRole = 'admin' | 'user';
+// Roles supported by the backend (see Postman collection/users payloads)
+export type UserRole = 'admin' | 'user' | 'editor' | 'viewer' | 'land_administrator';
 
 export interface Permission {
   pages: {
