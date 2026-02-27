@@ -551,7 +551,9 @@ const Pages = () => {
                                           className="h-auto p-0 text-xs"
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            navigator.clipboard.writeText(`${window.location.origin}/preview/${page.id}`);
+                                            navigator.clipboard.writeText(
+                                              `${window.location.origin}/dashboard/preview?templateId=${page.id}`,
+                                            );
                                             toast.success('Link copied!');
                                           }}
                                         >
@@ -591,7 +593,7 @@ const Pages = () => {
                                           className="h-8 w-8 p-0"
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            window.open(`/preview/${page.id}`, '_blank');
+                                            window.open(`/dashboard/preview?templateId=${page.id}`, '_blank');
                                           }}
                                         >
                                           <MdOpenInNew className="w-4 h-4" />
