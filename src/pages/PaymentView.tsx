@@ -131,13 +131,17 @@ export default function PaymentView() {
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">Fee Type</p>
                     <p className="font-medium">
-                      {payment.feeType.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                      {(payment.feeType ?? '-')
+                        .replaceAll('_', ' ')
+                        .replace(/\b\w/g, (l) => l.toUpperCase())}
                     </p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">Payment Method</p>
                     <p className="font-medium">
-                      {payment.paymentMethod.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                      {(payment.paymentMethod ?? '-')
+                        .replaceAll('_', ' ')
+                        .replace(/\b\w/g, (l) => l.toUpperCase())}
                     </p>
                   </div>
                   {payment.transactionId && (

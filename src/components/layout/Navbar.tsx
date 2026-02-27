@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { 
   MdMenu,
   MdDashboard, 
@@ -64,6 +64,10 @@ export const Navbar = () => {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-64">
+              <SheetHeader className="sr-only">
+                <SheetTitle>Navigation menu</SheetTitle>
+                <SheetDescription>Mobile navigation sidebar</SheetDescription>
+              </SheetHeader>
               <div className="flex flex-col gap-4 mt-8">
                 {/* Logo/Brand */}
                 <div className="flex items-center gap-3 pb-4 border-b">
