@@ -50,8 +50,11 @@ const Pages = () => {
   const deletePage = useDeletePage();
   const { hasPermission } = useAuth();
 
+  // always work with an actual array even if API returned something unexpected
+  const safePages = Array.isArray(pages) ? pages : [];
+
   // Get templates count for button state
-  const templates = pages?.filter(p => p.isTemplate && !p.isNamed) || [];
+  const templates = safePages.filter(p => p.isTemplate && !p.isNamed);
 
   const canCreate = hasPermission('pages', 'create');
   const canEdit = hasPermission('pages', 'edit');
@@ -59,9 +62,7 @@ const Pages = () => {
   const canPublish = hasPermission('pages', 'publish');
 
   const filteredAndSortedPages = useMemo(() => {
-    if (!pages) return [];
-    
-    let filtered = pages.filter(page => {
+    let filtered = safePages.filter(page => {
       const matchesSearch = 
         page.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         page.slug.toLowerCase().includes(searchQuery.toLowerCase());

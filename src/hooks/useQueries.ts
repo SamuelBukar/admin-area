@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { dashboardApi, pagesApi, usersApi, paymentsApi, applicationsApi, allocationsApi, expensesApi, userDashboardApi, reportsApi } from '@/lib/api';
+import { dashboardApi, pagesApi, usersApi, paymentsApi, applicationsApi, allocationsApi, expensesApi, userDashboardApi, reportsApi, authApi, meApi } from '@/lib/api';
 import type { Page, User } from '@/lib/api';
 import type { FormElement } from '@/types/builder';
 import type { Payment, PaymentSummary } from '@/types/payment';
@@ -7,55 +7,238 @@ import type { Application, ApplicationStats } from '@/types/application';
 import type { Allocation, AllocationStats } from '@/types/allocation';
 import type { Expense, ExpenseChartData, ExpenseSummary } from '@/types/expense';
 import type { UserDashboardStats, ProgressMetrics } from '@/types/dashboard';
+import type { RegisterRequest, LoginRequest, AuthResponse } from '@/types/auth';
+import type { ChangePasswordRequest } from '@/types/user';
+import { queryKeys } from '@/lib/queryKeys';
 import { toast } from 'sonner';
 
-// Query Keys - Centralized for better cache management
-export const queryKeys = {
-  dashboard: {
-    stats: ['dashboard', 'stats'] as const,
-    activity: ['dashboard', 'activity'] as const,
-    userStats: (userId: string) => ['dashboard', 'userStats', userId] as const,
-    progress: (userId: string) => ['dashboard', 'progress', userId] as const,
-  },
-  pages: {
-    all: ['pages'] as const,
-    detail: (id: string) => ['pages', id] as const,
-    published: ['pages', 'published'] as const,
-  },
-  applications: {
-    all: ['applications'] as const,
-    byUser: (userId: string) => ['applications', 'user', userId] as const,
-    byPage: (pageId: string, userId?: string) => ['applications', 'page', pageId, userId] as const,
-    detail: (id: string) => ['applications', id] as const,
-    stats: (userId?: string) => ['applications', 'stats', userId] as const,
-    statusHistory: (id: string) => ['applications', 'statusHistory', id] as const,
-  },
-  users: {
-    all: ['users'] as const,
-    detail: (id: string) => ['users', id] as const,
-  },
-  payments: {
-    all: ['payments'] as const,
-    byUser: (userId: string) => ['payments', 'user', userId] as const,
-    byApplication: (appId: string) => ['payments', 'application', appId] as const,
-    detail: (id: string) => ['payments', id] as const,
-    summary: (userId?: string) => ['payments', 'summary', userId] as const,
-  },
-  allocations: {
-    all: ['allocations'] as const,
-    byUser: (userId: string) => ['allocations', 'user', userId] as const,
-    byApplication: (appId: string) => ['allocations', 'application', appId] as const,
-    detail: (id: string) => ['allocations', id] as const,
-    stats: (userId?: string) => ['allocations', 'stats', userId] as const,
-  },
-  expenses: {
-    byUser: (userId: string) => ['expenses', 'user', userId] as const,
-    chart: (userId: string, days: number) => ['expenses', 'chart', userId, days] as const,
-    summary: (userId: string, days: number) => ['expenses', 'summary', userId, days] as const,
-  },
-} as const;
+// ============================================================================
+// Authentication Queries & Mutations
+// ============================================================================
 
+export const useRegister = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: RegisterRequest) => authApi.register(data),
+    onSuccess: (data) => {
+      // Store token in localStorage
+      localStorage.setItem('auth_token', data.token);
+      // Invalidate auth queries
+      queryClient.invalidateQueries({ queryKey: queryKeys.auth.all });
+      toast.success('Registration successful');
+    },
+    onError: (error) => {
+      toast.error('Registration failed');
+      console.error('Register error:', error);
+    },
+  });
+};
+
+export const useLogin = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: LoginRequest) => authApi.login(data),
+    onSuccess: (data) => {
+      // Store token in localStorage
+      localStorage.setItem('auth_token', data.token);
+      // Invalidate auth and dashboard queries
+      queryClient.invalidateQueries({ queryKey: queryKeys.auth.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.stats });
+      toast.success('Login successful');
+    },
+    onError: (error) => {
+      if (error instanceof Error && (error as any).status === 401) {
+        toast.error('Invalid email or password');
+      } else {
+        toast.error('Login failed');
+      }
+      console.error('Login error:', error);
+    },
+  });
+};
+
+export const useLogout = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => authApi.logout(),
+    onSuccess: () => {
+      // Clear token from localStorage
+      localStorage.removeItem('auth_token');
+      // Clear all queries
+      queryClient.clear();
+      toast.success('Logged out successfully');
+    },
+    onError: (error) => {
+      toast.error('Logout failed');
+      console.error('Logout error:', error);
+    },
+  });
+};
+
+export const useRefreshToken = () => {
+  return useMutation({
+    mutationFn: () => authApi.refreshToken(),
+    onSuccess: (data) => {
+      localStorage.setItem('auth_token', data.token);
+    },
+    onError: (error) => {
+      toast.error('Token refresh failed');
+      console.error('Refresh token error:', error);
+    },
+  });
+};
+
+// 2FA Hooks
+export const useSend2FA = () => {
+  return useMutation({
+    mutationFn: (email: string) => authApi.send2FA(email),
+    onSuccess: () => {
+      toast.success('2FA code sent to email');
+    },
+    onError: (error) => {
+      toast.error('Failed to send 2FA code');
+      console.error('Send 2FA error:', error);
+    },
+  });
+};
+
+export const useRequest2FALoginCode = () => {
+  return useMutation({
+    mutationFn: (email: string) => authApi.request2FALoginCode(email),
+    onSuccess: () => {
+      toast.success('2FA code sent to email');
+    },
+    onError: (error) => {
+      toast.error('Failed to request 2FA code');
+      console.error('Request 2FA code error:', error);
+    },
+  });
+};
+
+export const useVerify2FA = () => {
+  return useMutation({
+    mutationFn: ({ email, code }: { email: string; code: string }) =>
+      authApi.verify2FA(email, code),
+    onSuccess: () => {
+      toast.success('2FA verification successful');
+    },
+    onError: (error) => {
+      toast.error('2FA verification failed');
+      console.error('Verify 2FA error:', error);
+    },
+  });
+};
+
+export const useVerify2FAAndLogin = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ email, code }: { email: string; code: string }) =>
+      authApi.verify2FAAndLogin(email, code),
+    onSuccess: (data) => {
+      localStorage.setItem('auth_token', data.token);
+      queryClient.invalidateQueries({ queryKey: queryKeys.auth.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.stats });
+      toast.success('Login successful');
+    },
+    onError: (error) => {
+      toast.error('2FA login verification failed');
+      console.error('Verify 2FA and login error:', error);
+    },
+  });
+};
+
+export const useEnable2FA = () => {
+  return useMutation({
+    mutationFn: () => authApi.enable2FA(),
+    onSuccess: () => {
+      toast.success('2FA enabled successfully');
+    },
+    onError: (error) => {
+      toast.error('Failed to enable 2FA');
+      console.error('Enable 2FA error:', error);
+    },
+  });
+};
+
+export const useDisable2FA = () => {
+  return useMutation({
+    mutationFn: (code: string) => authApi.disable2FA(code),
+    onSuccess: () => {
+      toast.success('2FA disabled successfully');
+    },
+    onError: (error) => {
+      toast.error('Failed to disable 2FA');
+      console.error('Disable 2FA error:', error);
+    },
+  });
+};
+
+// ============================================================================
+// Me  (Current User) Queries & Mutations
+// ============================================================================
+
+export const useGetMe = () => {
+  return useQuery({
+    queryKey: queryKeys.auth.me,
+    queryFn: () => meApi.getMe(),
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    gcTime: 1000 * 60 * 10, // 10 minutes
+  });
+};
+
+export const useUpdateMe = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: { name?: string; email?: string }) => meApi.updateMe(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.auth.me });
+      toast.success('Profile updated successfully');
+    },
+    onError: (error) => {
+      toast.error('Failed to update profile');
+      console.error('Update me error:', error);
+    },
+  });
+};
+
+export const useChangePassword = () => {
+  return useMutation({
+    mutationFn: (data: ChangePasswordRequest) => meApi.changePassword(data),
+    onSuccess: () => {
+      toast.success('Password changed successfully');
+    },
+    onError: (error) => {
+      toast.error('Failed to change password');
+      console.error('Change password error:', error);
+    },
+  });
+};
+
+export const useDeleteMe = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => meApi.deleteMe(),
+    onSuccess: () => {
+      localStorage.removeItem('auth_token');
+      queryClient.clear();
+      toast.success('Account deleted successfully');
+    },
+    onError: (error) => {
+      toast.error('Failed to delete account');
+      console.error('Delete me error:', error);
+    },
+  });
+};
+
+// ============================================================================
 // Dashboard Queries
+// ============================================================================
 export const useDashboardStats = () => {
   return useQuery({
     queryKey: queryKeys.dashboard.stats,
@@ -75,10 +258,11 @@ export const useRecentActivity = () => {
 
 // Pages Queries
 export const usePages = () => {
-  return useQuery({
+  return useQuery<string[]>({
     queryKey: queryKeys.pages.all,
     queryFn: pagesApi.getAll,
     staleTime: 1000 * 60, // 1 minute
+    select: (data) => (Array.isArray(data) ? data : []),
   });
 };
 
@@ -166,14 +350,23 @@ export const usePublishPage = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ pageId, elements, pageData }: { pageId: string | null; elements: FormElement[]; pageData: { title: string; slug: string; status: 'published' | 'draft' } }) => {
+    mutationFn: async ({ pageId, elements, pageData }: { pageId: string | null; elements: FormElement[]; pageData: { title: string; slug: string; status: 'published' | 'draft' } }) => {
       if (pageId) {
-        return pagesApi.updatePageTemplate(pageId, elements);
+        // update the page first
+        await pagesApi.update(pageId, { elements, ...pageData });
+        if (pageData.status === 'published') {
+          return pagesApi.publishPage(pageId);
+        }
+        return pagesApi.getById(pageId);
       } else {
-        return pagesApi.create({
+        const created = await pagesApi.create({
           ...pageData,
           elements,
         });
+        if (pageData.status === 'published') {
+          return pagesApi.publishPage(created.id);
+        }
+        return created;
       }
     },
     onSuccess: () => {
@@ -222,10 +415,11 @@ export const usePublishedPages = () => {
 
 // Users Queries
 export const useUsers = () => {
-  return useQuery({
+  return useQuery<User[]>({
     queryKey: queryKeys.users.all,
     queryFn: usersApi.getAll,
     staleTime: 1000 * 60, // 1 minute
+    select: (data) => (Array.isArray(data) ? data : []),
   });
 };
 
@@ -282,36 +476,45 @@ export const useDeleteUser = () => {
 
 // Payments Queries
 export const usePayments = () => {
-  return useQuery({
+  return useQuery<Payment[]>({
     queryKey: queryKeys.payments.all,
     queryFn: paymentsApi.getAll,
     staleTime: 1000 * 60, // 1 minute
+    select: (data) => (Array.isArray(data) ? data : []),
   });
 };
 
 export const useUserPayments = (userId: string) => {
-  return useQuery({
+  return useQuery<Payment[]>({
     queryKey: queryKeys.payments.byUser(userId),
     queryFn: () => paymentsApi.getByUserId(userId),
     enabled: !!userId,
     staleTime: 1000 * 60,
+    select: (data) => (Array.isArray(data) ? data : []),
   });
 };
 
 export const usePaymentHistory = (userId: string) => {
-  return useQuery({
+  return useQuery<Payment[]>({
     queryKey: queryKeys.payments.byUser(userId),
     queryFn: () => paymentsApi.getByUserId(userId),
     enabled: !!userId,
     staleTime: 1000 * 60,
+    select: (data) => (Array.isArray(data) ? data : []),
   });
 };
 
 export const usePaymentSummary = (userId?: string) => {
-  return useQuery({
+  return useQuery<PaymentSummary>({
     queryKey: queryKeys.payments.summary(userId),
     queryFn: () => paymentsApi.getSummary(userId),
     staleTime: 1000 * 60,
+    select: (data) => {
+      if (data && typeof data === 'object' && !Array.isArray(data)) {
+        return data;
+      }
+      return { total: 0, paid: 0, pending: 0, failed: 0, refunded: 0 };
+    },
   });
 };
 
@@ -345,19 +548,21 @@ export const useUpdatePaymentStatus = () => {
 
 // Applications Queries
 export const useApplications = () => {
-  return useQuery({
+  return useQuery<Application[]>({
     queryKey: queryKeys.applications.all,
     queryFn: applicationsApi.getAll,
     staleTime: 1000 * 60,
+    select: (data) => (Array.isArray(data) ? data : []),
   });
 };
 
 export const useUserApplications = (userId: string) => {
-  return useQuery({
+  return useQuery<Application[]>({
     queryKey: queryKeys.applications.byUser(userId),
     queryFn: () => applicationsApi.getByUserId(userId),
     enabled: !!userId,
     staleTime: 1000 * 60,
+    select: (data) => (Array.isArray(data) ? data : []),
   });
 };
 
@@ -434,8 +639,8 @@ export const useSubmitApplication = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ pageId, userId, formData, status }: { pageId: string; userId: string; formData: Record<string, any>; status?: 'draft' | 'submitted' }) =>
-      applicationsApi.submitApplication(pageId, userId, formData, status || 'submitted'),
+    mutationFn: (params: { pageId: string; userId: string; formData: Record<string, unknown>; status?: 'draft' | 'submitted' }) =>
+      applicationsApi.submitApplication(params.pageId, params.userId, params.formData as Record<string, never>, params.status || 'submitted'),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.applications.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.applications.byUser(data.userId) });
@@ -465,19 +670,21 @@ export const useApplicationsByPage = (pageId: string, userId?: string) => {
 
 // Allocations Queries
 export const useAllocations = () => {
-  return useQuery({
+  return useQuery<Allocation[]>({
     queryKey: queryKeys.allocations.all,
     queryFn: allocationsApi.getAll,
     staleTime: 1000 * 60,
+    select: (data) => (Array.isArray(data) ? data : []),
   });
 };
 
 export const useUserAllocations = (userId: string) => {
-  return useQuery({
+  return useQuery<Allocation[]>({
     queryKey: queryKeys.allocations.byUser(userId),
     queryFn: () => allocationsApi.getByUserId(userId),
     enabled: !!userId,
     staleTime: 1000 * 60,
+    select: (data) => (Array.isArray(data) ? data : []),
   });
 };
 
@@ -577,6 +784,160 @@ export const useGenerateApprovalSheet = () => {
       toast.error('Failed to generate approval sheet');
       console.error('Generate approval sheet error:', error);
     },
+  });
+};
+
+export const useGenerateStatusReport = () => {
+  return useMutation({
+    mutationFn: (applicationId: string) => reportsApi.generateStatusReport(applicationId),
+    onSuccess: () => {
+      toast.success('Status report generated successfully');
+    },
+    onError: (error) => {
+      toast.error('Failed to generate status report');
+      console.error('Generate status report error:', error);
+    },
+  });
+};
+
+export const useGenerateAllocationsReport = () => {
+  return useMutation({
+    mutationFn: (applicationId: string) => reportsApi.generateAllocationsReport(applicationId),
+    onSuccess: () => {
+      toast.success('Allocations report generated successfully');
+    },
+    onError: (error) => {
+      toast.error('Failed to generate allocations report');
+      console.error('Generate allocations report error:', error);
+    },
+  });
+};
+
+export const useGenerateBillInvoice = () => {
+  return useMutation({
+    mutationFn: ({ applicationId, type }: { applicationId: string; type: 'bill' | 'invoice' }) =>
+      reportsApi.generateBillInvoice(applicationId, type),
+    onSuccess: () => {
+      toast.success('Bill/Invoice generated successfully');
+    },
+    onError: (error) => {
+      toast.error('Failed to generate bill/invoice');
+      console.error('Generate bill/invoice error:', error);
+    },
+  });
+};
+
+export const useGenerateCertificate = () => {
+  return useMutation({
+    mutationFn: (applicationId: string) => reportsApi.generateCertificate(applicationId),
+    onSuccess: () => {
+      toast.success('Certificate generated successfully');
+    },
+    onError: (error) => {
+      toast.error('Failed to generate certificate');
+      console.error('Generate certificate error:', error);
+    },
+  });
+};
+
+// ============================================================================
+// Additional User Stats Hooks
+// ============================================================================
+
+export const useUserDetail = (userId: string) => {
+  return useQuery({
+    queryKey: queryKeys.users.detail(userId),
+    queryFn: () => usersApi.getAll().then(users => users.find(u => u.id === userId)),
+    enabled: !!userId,
+    staleTime: 1000 * 60,
+  });
+};
+
+export const useUserStats = (userId: string) => {
+  return useQuery({
+    queryKey: queryKeys.users.stats(userId),
+    queryFn: () => userDashboardApi.getStats(userId),
+    enabled: !!userId,
+    staleTime: 1000 * 60,
+  });
+};
+
+// ============================================================================
+// Additional Payment Hooks
+// ============================================================================
+
+export const useCreatePayment = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: Partial<Payment>) => paymentsApi.create(data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.payments.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.payments.summary() });
+      if (variables.applicationId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.payments.byApplication(variables.applicationId) });
+      }
+      toast.success('Payment created successfully');
+    },
+    onError: (error) => {
+      toast.error('Failed to create payment');
+      console.error('Create payment error:', error);
+    },
+  });
+};
+
+export const useApplicationPayments = (applicationId: string) => {
+  return useQuery({
+    queryKey: queryKeys.payments.byApplication(applicationId),
+    queryFn: () => paymentsApi.getByApplicationId(applicationId),
+    enabled: !!applicationId,
+    staleTime: 1000 * 60,
+  });
+};
+
+// ============================================================================
+// Additional Allocation Hooks
+// ============================================================================
+
+export const useCreateAllocation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: Partial<Allocation>) => allocationsApi.create(data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.allocations.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.allocations.stats() });
+      if (variables.applicationId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.allocations.byApplication(variables.applicationId) });
+      }
+      toast.success('Allocation created successfully');
+    },
+    onError: (error) => {
+      toast.error('Failed to create allocation');
+      console.error('Create allocation error:', error);
+    },
+  });
+};
+
+export const useApplicationAllocations = (applicationId: string) => {
+  return useQuery({
+    queryKey: queryKeys.allocations.byApplication(applicationId),
+    queryFn: () => allocationsApi.getByApplicationId(applicationId),
+    enabled: !!applicationId,
+    staleTime: 1000 * 60,
+  });
+};
+
+// ============================================================================
+// Application Status History
+// ============================================================================
+
+export const useApplicationStatusHistory = (applicationId: string) => {
+  return useQuery({
+    queryKey: queryKeys.applications.statusHistory(applicationId),
+    queryFn: () => applicationsApi.getStatusHistory(applicationId),
+    enabled: !!applicationId,
+    staleTime: 1000 * 60,
   });
 };
 

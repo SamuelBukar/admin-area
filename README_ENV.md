@@ -27,7 +27,7 @@ This project uses environment variables to configure the API URL and other setti
 
 ### `VITE_API_URL`
 - **Description:** Base URL for your API
-- **Default:** Empty (uses mock data)
+- **Default:** *none* – you must set this to your backend URL (mocks removed)
 - **Example:** `https://api.yourdomain.com` or `http://localhost:3000/api`
 - **Note:** Must start with `VITE_` prefix to be exposed to the client in Vite
 
@@ -87,6 +87,6 @@ When deploying to production:
 
 ## Development vs Production
 
-- **Development (no VITE_API_URL):** Uses mock data with simulated delays
-- **Production (with VITE_API_URL):** Makes real API calls to the configured URL
+- **Development / Production:** Always configure `VITE_API_URL` to point at your backend (e.g. `https://admin-area-be.onrender.com/api`). The project no longer falls back to mock data; leaving the variable empty will result in errors.
 
+> **Credentials:** The frontend does not ship with any built‑in demo account. You must login using a user that exists on the backend (or register/create one via an API call). If you receive a 401 Unauthorized error, double‑check that the email/password pair is valid for your hosted API.

@@ -36,7 +36,11 @@ export default function Reports() {
   const { data: pages } = usePages();
   const updateStatus = useUpdateApplicationStatus();
 
-  const applications = isAdmin ? (allApplications || []) : (userApplications || []);
+  const safeAllApplications = Array.isArray(allApplications) ? allApplications : [];
+  const safeUserApplications = Array.isArray(userApplications) ? userApplications : [];
+  const safePages = Array.isArray(pages) ? pages : [];
+
+  const applications = isAdmin ? safeAllApplications : safeUserApplications;
   const isLoading = isAdmin ? allApplicationsLoading : userApplicationsLoading;
 
   const [searchQuery, setSearchQuery] = useState('');

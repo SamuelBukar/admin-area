@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { FormElement, WidgetType } from '@/types/builder';
 import { getWidgetConfig } from '@/config/widgets';
 import { WidgetSidebar } from './WidgetSidebar';
@@ -13,6 +14,7 @@ interface FormBuilderProps {
 }
 
 export const FormBuilder = ({ pageId, initialElements }: FormBuilderProps) => {
+  const { user } = useAuth();
   const [elements, setElements] = useState<FormElement[]>(initialElements || []);
   const [isDragOver, setIsDragOver] = useState(false);
   const saveTemplate = useSaveTemplate();
@@ -304,9 +306,8 @@ export const FormBuilder = ({ pageId, initialElements }: FormBuilderProps) => {
       return;
     }
     
-    // Get current user ID
-    const savedUser = localStorage.getItem('landadmin-user');
-    const userId = savedUser ? JSON.parse(savedUser).id : undefined;
+    // Get current user ID from auth context
+    const userId = user?.id;
     
     // Save template using mutation hook (which will invalidate queries)
     saveTemplate.mutate(

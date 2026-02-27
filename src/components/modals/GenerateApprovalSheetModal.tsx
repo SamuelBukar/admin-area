@@ -34,16 +34,20 @@ export const GenerateApprovalSheetModal = ({
   const [selectedAllocationId, setSelectedAllocationId] = useState<string>('');
   const [selectedPaymentId, setSelectedPaymentId] = useState<string>('');
 
-  const selectedApplication = applications.find((a) => a.id === selectedApplicationId);
-  const selectedAllocation = allocations.find((a) => a.id === selectedAllocationId);
-  const selectedPayment = payments.find((p) => p.id === selectedPaymentId);
+  const safeApplications = Array.isArray(applications) ? applications : [];
+  const safeAllocations = Array.isArray(allocations) ? allocations : [];
+  const safePayments = Array.isArray(payments) ? payments : [];
+
+  const selectedApplication = safeApplications.find((a) => a.id === selectedApplicationId);
+  const selectedAllocation = safeAllocations.find((a) => a.id === selectedAllocationId);
+  const selectedPayment = safePayments.find((p) => p.id === selectedPaymentId);
 
   const availableAllocations = selectedApplicationId
-    ? allocations.filter((a) => a.applicationId === selectedApplicationId)
+    ? safeAllocations.filter((a) => a.applicationId === selectedApplicationId)
     : [];
 
   const availablePayments = selectedApplicationId
-    ? payments.filter((p) => p.applicationId === selectedApplicationId)
+    ? safePayments.filter((p) => p.applicationId === selectedApplicationId)
     : [];
 
   const handleGenerate = () => {

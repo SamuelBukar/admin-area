@@ -454,7 +454,7 @@ const Dashboard = () => {
       {/* Modals */}
       <CreatePageModal open={createPageModalOpen} onOpenChange={setCreatePageModalOpen} />
       <CreateUserModal open={createUserModalOpen} onOpenChange={setCreateUserModalOpen} />
-      {allApplications && allAllocations && allPayments && (
+      {Array.isArray(allApplications) && Array.isArray(allAllocations) && Array.isArray(allPayments) && (
         <GenerateApprovalSheetModal
           open={approvalSheetModalOpen}
           onOpenChange={setApprovalSheetModalOpen}

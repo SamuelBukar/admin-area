@@ -34,7 +34,11 @@ export default function Allocations() {
   const { data: userAllocations, isLoading: userAllocationsLoading } = useUserAllocations(userId);
   const { data: allApplications } = useApplications();
 
-  const allocations = isAdmin ? (allAllocations || []) : (userAllocations || []);
+  const safeAllAllocations = Array.isArray(allAllocations) ? allAllocations : [];
+  const safeUserAllocations = Array.isArray(userAllocations) ? userAllocations : [];
+  const safeApplications = Array.isArray(allApplications) ? allApplications : [];
+
+  const allocations = isAdmin ? safeAllAllocations : safeUserAllocations;
   const isLoading = isAdmin ? allAllocationsLoading : userAllocationsLoading;
 
   // Helper to get applicant info from allocation

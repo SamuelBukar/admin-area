@@ -14,7 +14,7 @@ import { MdSave, MdPerson, MdNotifications, MdSecurity, MdPalette, MdPayment } f
 import { DeleteConfirmModal } from '@/components/modals/DeleteConfirmModal';
 import { Enable2FAModal } from '@/components/modals/Enable2FAModal';
 import { PaymentSettings } from '@/components/settings/PaymentSettings';
-import { twoFactorApi } from '@/lib/api';
+import { useUpdateMe, useChangePassword, useDeleteMe, useDisable2FA, useEnable2FA } from '@/hooks/useQueries';
 
 const Settings = () => {
   const { user } = useAuth();
@@ -29,45 +29,67 @@ const Settings = () => {
   const [enable2FAModalOpen, setEnable2FAModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
+  const updateMe = useUpdateMe();
   const handleSaveProfile = () => {
     setIsSaving(true);
-    setTimeout(() => {
-      setIsSaving(false);
-      toast.success('Profile updated successfully');
-    }, 1000);
+    updateMe.mutate(
+      { name, email },
+      {
+        onSettled: () => setIsSaving(false),
+      }
+    );
   };
 
   const handleSaveNotifications = () => {
     toast.success('Notification settings saved');
   };
 
+  const changePassword = useChangePassword();
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+
   const handleUpdatePassword = (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success('Password updated successfully');
+    if (newPassword !== confirmPassword) {
+      toast.error('New passwords do not match');
+      return;
+    }
+    changePassword.mutate(
+      { currentPassword, newPassword },
+      {
+        onSuccess: () => {
+          toast.success('Password updated successfully');
+          setCurrentPassword('');
+          setNewPassword('');
+          setConfirmPassword('');
+        },
+      }
+    );
   };
 
+  const deleteMe = useDeleteMe();
   const handleDeleteAccount = () => {
-    // In production, this would call an API
-    toast.success('Account deletion initiated');
-    setDeleteAccountModalOpen(false);
+    deleteMe.mutate(undefined, {
+      onSuccess: () => {
+        setDeleteAccountModalOpen(false);
+      },
+    });
   };
 
+  const enable2FA = useEnable2FA();
   const handleEnable2FASuccess = async () => {
-    // Update user's 2FA status
     if (user) {
-      const updatedUser = { ...user, twoFactorEnabled: true };
-      localStorage.setItem('landadmin-user', JSON.stringify(updatedUser));
+      await enable2FA.mutateAsync();
       setTwoFactorAuth(true);
+      // Optionally refresh user data
     }
   };
 
+  const disable2FA = useDisable2FA();
   const handleDisable2FA = async () => {
-    if (!user) return;
-    
     try {
-      await twoFactorApi.disable(user.id);
-      const updatedUser = { ...user, twoFactorEnabled: false };
-      localStorage.setItem('landadmin-user', JSON.stringify(updatedUser));
+      await disable2FA.mutateAsync(''); // should pass verification code if required
       setTwoFactorAuth(false);
       toast.success('Two-factor authentication disabled');
     } catch (error) {
@@ -234,15 +256,33 @@ const Settings = () => {
                 <form onSubmit={handleUpdatePassword} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="current-password">Current Password</Label>
-                    <Input id="current-password" type="password" required />
+                    <Input
+                      id="current-password"
+                      type="password"
+                      required
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="new-password">New Password</Label>
-                    <Input id="new-password" type="password" required />
+                    <Input
+                      id="new-password"
+                      type="password"
+                      required
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="confirm-password">Confirm New Password</Label>
-                    <Input id="confirm-password" type="password" required />
+                    <Input
+                      id="confirm-password"
+                      type="password"
+                      required
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                    />
                   </div>
                   <Separator />
                   <Button type="submit">Update Password</Button>

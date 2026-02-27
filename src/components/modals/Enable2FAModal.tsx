@@ -10,8 +10,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { twoFactorApi } from '@/lib/api';
 import { toast } from 'sonner';
+import { useSend2FA, useVerify2FA } from '@/hooks/useQueries';
 
 interface Enable2FAModalProps {
   open: boolean;
@@ -26,10 +26,13 @@ export const Enable2FAModal = ({ open, onOpenChange, userEmail, onSuccess }: Ena
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
 
+  const send2FAMutation = useSend2FA();
+  const verify2FAMutation = useVerify2FA();
+
   const handleRequestCode = async () => {
     setIsSending(true);
     try {
-      await twoFactorApi.sendCode(userEmail);
+      await send2FAMutation.mutateAsync(userEmail);
       toast.success('Verification code sent to your email');
       setStep('verify');
     } catch (error) {
@@ -47,16 +50,13 @@ export const Enable2FAModal = ({ open, onOpenChange, userEmail, onSuccess }: Ena
 
     setIsLoading(true);
     try {
-      const isValid = await twoFactorApi.verifyCode(userEmail, code);
-      if (isValid) {
-        toast.success('Two-factor authentication enabled');
-        onSuccess();
-        onOpenChange(false);
-        setStep('request');
-        setCode('');
-      } else {
-        toast.error('Invalid code. Please try again.');
-      }
+      await verify2FAMutation.mutateAsync({ email: userEmail, code });
+      // auth API simply resolves if success
+      toast.success('Two-factor authentication enabled');
+      onSuccess();
+      onOpenChange(false);
+      setStep('request');
+      setCode('');
     } catch (error) {
       toast.error('Verification failed. Please try again.');
     } finally {

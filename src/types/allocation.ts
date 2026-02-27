@@ -27,3 +27,19 @@ export interface AllocationStats {
   cancelled: number;
 }
 
+export interface AllocationCreateRequest {
+  applicationId: string;
+  amount?: number;
+  type?: AllocationType;
+  location?: string;
+  parcelNumber?: string;
+  size?: string;
+  details?: Record<string, any>;
+  notes?: string;
+}
+
+export interface AllocationUpdateStatusRequest {
+  status: AllocationStatus;
+  notes?: string;
+}
+

@@ -2,8 +2,11 @@
 // Vite requires VITE_ prefix for environment variables to be exposed to the client
 
 export const env = {
-  // API Base URL - defaults to empty string for relative URLs or mock data
-  apiUrl: import.meta.env.VITE_API_URL || '',
+  // API Base URL
+  // In development: uses mock data (set apiUrl empty)
+  // In production: uses hosted API
+  // Override with VITE_API_URL env var to use real API in development
+  apiUrl: import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '' : 'https://admin-area-be.onrender.com'),
   
   // API Timeout in milliseconds
   apiTimeout: parseInt(import.meta.env.VITE_API_TIMEOUT || '30000', 10),
@@ -26,7 +29,11 @@ export const getApiUrl = (endpoint: string): string => {
   }
   
   // Remove trailing slash from base URL and leading slash from endpoint
-  const baseUrl = env.apiUrl.replace(/\/$/, '');
+  let baseUrl = env.apiUrl.replace(/\/$/, '');
+  // if the configured URL doesn't already include '/api', add it
+  if (!baseUrl.endsWith('/api')) {
+    baseUrl = `${baseUrl}/api`;
+  }
   const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   
   return `${baseUrl}${path}`;

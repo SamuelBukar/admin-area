@@ -34,7 +34,11 @@ export default function Payments() {
   const { data: userPayments, isLoading: userPaymentsLoading } = useUserPayments(userId);
   const { data: allApplications } = useApplications();
 
-  const payments = isAdmin ? (allPayments || []) : (userPayments || []);
+  const safeAllPayments = Array.isArray(allPayments) ? allPayments : [];
+  const safeUserPayments = Array.isArray(userPayments) ? userPayments : [];
+  const safeApplications = Array.isArray(allApplications) ? allApplications : [];
+
+  const payments = isAdmin ? safeAllPayments : safeUserPayments;
   const isLoading = isAdmin ? allPaymentsLoading : userPaymentsLoading;
 
   // Helper to get applicant info from payment

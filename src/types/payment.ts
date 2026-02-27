@@ -28,3 +28,20 @@ export interface PaymentSummary {
   refunded: number;
 }
 
+export interface PaymentCreateRequest {
+  applicationId: string;
+  amount: number;
+  currency?: string;
+  paymentMethod?: PaymentMethod;
+  dueDate?: string;
+  description?: string;
+  feeType?: FeeType;
+  notes?: string;
+}
+
+export interface PaymentUpdateStatusRequest {
+  status: PaymentStatus;
+  transactionId?: string;
+  notes?: string;
+}
+

@@ -34,13 +34,15 @@ const UserManagement = () => {
   const deleteUser = useDeleteUser();
   const { hasPermission } = useAuth();
 
+  const safeUsers = Array.isArray(users) ? users : [];
+
   const canCreate = hasPermission('users', 'create');
   const canEdit = hasPermission('users', 'edit');
   const canDelete = hasPermission('users', 'delete');
 
   const filteredUsers = useMemo(() => {
-    if (!users) return [];
-    return users.filter(user =>
+    const list = safeUsers;
+    return list.filter(user =>
       user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.email.toLowerCase().includes(searchQuery.toLowerCase())
     );

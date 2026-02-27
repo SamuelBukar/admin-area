@@ -91,7 +91,16 @@ export async function apiRequest<T = any>(
     // Handle empty responses
     const contentType = response.headers.get('content-type');
     if (contentType && contentType.includes('application/json')) {
-      return await response.json();
+      const json = await response.json();
+      // Many APIs wrap their real payload inside a `data` property. To make
+      // the client easier to consume we unwrap it automatically here so callers
+      // don't have to repeat the same logic everywhere.
+      if (json && typeof json === 'object' && 'data' in json) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+        return (json as any).data;
+      }
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+      return json as any;
     }
 
     return await response.text() as any;

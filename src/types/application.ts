@@ -46,3 +46,26 @@ export interface ApplicationStats {
   rejected: number;
 }
 
+export interface ApplicationCreateRequest {
+  title: string;
+  applicantName: string;
+  applicantEmail?: string;
+  applicantPhone?: string;
+  description?: string;
+  type?: ApplicationType;
+  priority?: ApplicationPriority;
+  formData?: Record<string, any>;
+  pageId?: string;
+}
+
+export interface ApplicationSubmitRequest {
+  applicationId: string;
+  formData?: Record<string, any>;
+  status?: 'draft' | 'submitted';
+}
+
+export interface ApplicationUpdateStatusRequest {
+  status: ApplicationStatus;
+  rejectionReason?: string;
+}
+
